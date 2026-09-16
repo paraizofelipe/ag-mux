@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paraizofelipe/ag-mux/internal/git"
 	"github.com/paraizofelipe/ag-mux/internal/tmux"
 )
 
@@ -68,6 +69,15 @@ var fixtures = []fixture{
 		pane:    tmux.Pane{ID: "%39", Command: "zsh", Title: "π - dev", Path: "/Users/dev"},
 		harness: "omp", live: false,
 	},
+}
+
+// stubGit keeps the detection tests off the filesystem: the fixture paths are
+// invented, and what git would say about them is tested in internal/git.
+func stubGit(t *testing.T, info git.Info, ok bool) {
+	t.Helper()
+	prev := gitLookup
+	gitLookup = func(string) (git.Info, bool) { return info, ok }
+	t.Cleanup(func() { gitLookup = prev })
 }
 
 func load(t *testing.T, name string) []string {
@@ -166,6 +176,8 @@ func TestTask(t *testing.T) {
 // End to end over the whole fixture set: the five live agents come back, the
 // three leftover titles do not, and neither does the sidebar itself.
 func TestDetect(t *testing.T) {
+	stubGit(t, git.Info{}, false)
+
 	var panes []tmux.Pane
 	captures := map[string][]string{}
 	for _, f := range fixtures {
@@ -199,5 +211,31 @@ func TestDetect(t *testing.T) {
 	}
 	if a := seen["%30"]; a.Label != "orbita" {
 		t.Errorf("label = %q, want %q", a.Label, "orbita")
+	}
+}
+
+// Claude Code prints the branch in its own footer, so the sidebar can show it
+// without asking git at all.
+func TestClaudeBranchFromChrome(t *testing.T) {
+	cases := []struct {
+		file   string
+		branch string
+		dirty  bool
+		ok     bool
+	}{
+		{"claude-idle.txt", "main", false, true},
+		{"claude-draft.txt", "main", true, true},
+		// No git suffix in the footer: the directory is not a repository, and
+		// the adapter must say so rather than invent a branch.
+		{"claude-busy.txt", "", false, false},
+	}
+	for _, c := range cases {
+		t.Run(c.file, func(t *testing.T) {
+			branch, dirty, ok := Claude{}.Branch(load(t, c.file))
+			if ok != c.ok || branch != c.branch || dirty != c.dirty {
+				t.Errorf("Branch() = (%q, %v, %v), want (%q, %v, %v)",
+					branch, dirty, ok, c.branch, c.dirty, c.ok)
+			}
+		})
 	}
 }

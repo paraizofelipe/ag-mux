@@ -29,6 +29,8 @@ var (
 	styErr      = lipgloss.NewStyle().Foreground(colRed)
 	styWarn     = lipgloss.NewStyle().Foreground(colYellow)
 	styPin      = lipgloss.NewStyle().Foreground(colBlue)
+	styBranch   = lipgloss.NewStyle().Foreground(colBlue)
+	styWorktree = lipgloss.NewStyle().Foreground(colGreen)
 	styCurrent  = lipgloss.NewStyle().Foreground(colGreen)
 )
 

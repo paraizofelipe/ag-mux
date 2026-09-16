@@ -58,6 +58,11 @@ func (OMP) Classify(p tmux.Pane, tail []string) (State, string, time.Duration) {
 	return StateIdle, "", 0
 }
 
+// Branch is left to git. OMP does print the branch in its status line, but
+// between nerd-font separators whose positions shift with configuration —
+// guessing at it would be less reliable than asking.
+func (OMP) Branch(tail []string) (string, bool, bool) { return "", false, false }
+
 func (OMP) Task(p tmux.Pane) string {
 	t := strings.TrimPrefix(p.Title, ompMark)
 	t = ompSpinnerRe.ReplaceAllString(t, "")

@@ -92,6 +92,24 @@ func (Claude) Classify(p tmux.Pane, tail []string) (State, string, time.Duration
 	return StateUnknown, "", 0
 }
 
+// claudeBranchRe matches the branch Claude Code prints in its footer next to
+// the directory: "[Opus 5] │ ag-mux git:(main)", with a trailing "*" when
+// there are uncommitted changes.
+var claudeBranchRe = regexp.MustCompile(`git:\(([^)]+)\)`)
+
+func (Claude) Branch(tail []string) (string, bool, bool) {
+	for _, l := range tailLines(tail, claudeChromeDepth) {
+		m := claudeBranchRe.FindStringSubmatch(l)
+		if m == nil {
+			continue
+		}
+		name := strings.TrimSpace(m[1])
+		dirty := strings.HasSuffix(name, "*")
+		return strings.TrimSuffix(name, "*"), dirty, true
+	}
+	return "", false, false
+}
+
 func (Claude) Task(p tmux.Pane) string {
 	return strings.TrimSpace(strings.TrimPrefix(p.Title, claudeMark))
 }

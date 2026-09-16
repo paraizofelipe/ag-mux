@@ -6,12 +6,15 @@ qual está trabalhando e qual parou esperando você, e pula pra ele.
 ```
 AGENTES                             1! 3
 ────────────────────────────────────────
-▸✳ orbita                              ○
-   mapear configuracoes
- ✳ farol                               ●
+▸✳ proj                                ●
    implementar filtros
- π pomar                               ⢿
+   ⎇ main*
+ ✳ wt                                  ⣾
+   revisar exportacao              8m03s
+   ⎇ recurso-novo             ⧉ worktree
+ π pomar                               ⣾
    escrever testes de integracao     26s
+   ⎇ main
 ────────────────────────────────────────
 ⏎ ir · z zoom · p pin · x kill · n novo
 q sair
@@ -19,6 +22,8 @@ q sair
 
 `1! 3` = 3 agentes, 1 precisa de você.
 `⣾` trabalhando · `●` precisa de você · `○` ocioso · `◀` o pane em que você está.
+`⎇` a branch (com `*` se houver mudanças não commitadas) · `⧉` é um worktree ligado,
+não o checkout principal.
 
 ## Harnesses reconhecidos
 
@@ -187,6 +192,22 @@ ou reiniciando o servidor.
 ### Permanente
 
 A linha `run-shell` no `~/.tmux.conf`, como na instalação acima.
+
+## Branch e worktree
+
+A terceira linha de cada agente mostra em que branch ele está e se aquele
+diretório é um worktree ligado (`git worktree add`) em vez do checkout
+principal. Com vários agentes no mesmo repositório, é o que diz qual é qual.
+
+A branch sai de graça quando o harness já a imprime: o Claude Code mostra
+`git:(main*)` no próprio rodapé, que é a mesma linha que a sidebar já lê para
+confirmar que ele está vivo. Quando o harness não mostra — o OMP é o caso —, a
+sidebar pergunta ao git.
+
+Essa é a única parte que custa processos, então ela é cacheada: uma invocação
+de `git rev-parse` responde branch e worktree de uma vez, e o resultado vale
+10 segundos. Sem cache seriam ~11 ms por agente por varredura, mais que todo o
+resto da sidebar somado.
 
 ## Calibrar
 

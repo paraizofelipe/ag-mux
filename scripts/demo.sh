@@ -22,10 +22,21 @@ tmux new-session -d -s "$SESSION" -x 200 -y 50 -n sidebar
 # case where that naming needs help.
 WORKDIRS="$(mktemp -d "${TMPDIR:-/tmp}/ag-mux-demo.XXXXXX")"
 
-# fake <window> <fixture> <pane title> [dir]
+# Each directory is a real git repository, so the branch and worktree markers
+# in the sidebar have something true to report.
+repo() {
+    local path="$1" branch="$2"
+    [ -d "$path/.git" ] && return 0
+    git init -q -b "$branch" "$path"
+    git -C "$path" -c user.email=demo@demo -c user.name=demo \
+        commit -q --allow-empty -m "demo"
+}
+
+# fake <window> <fixture> <pane title> [dir] [branch]
 fake() {
-    local win="$1" fixture="$2" title="$3" dir="${4:-$1}" pane
+    local win="$1" fixture="$2" title="$3" dir="${4:-$1}" branch="${5:-main}" pane
     mkdir -p "$WORKDIRS/$dir"
+    repo "$WORKDIRS/$dir" "$branch"
     pane=$(tmux new-window -d -t "$SESSION" -n "$win" -c "$WORKDIRS/$dir" -P -F '#{pane_id}' \
         "cat $(printf %q "$DATA/$fixture"); exec tail -f /dev/null")
     tmux select-pane -t "$pane" -T "$title"
@@ -34,6 +45,11 @@ fake() {
 fake atlas   claude-busy.txt  '✳ ajustar exportacao'
 fake farol   claude-draft.txt '✳ implementar filtros'
 fake pomar   omp-busy.txt     'π ⠸ escrever testes de integracao'
+
+# One agent in a linked worktree, so the ⧉ marker has something to mark.
+repo "$WORKDIRS/atlas" main
+git -C "$WORKDIRS/atlas" worktree add -q -b recurso-novo "$WORKDIRS/recurso" 2>/dev/null || true
+fake recurso claude-busy.txt  '✳ revisar exportacao'
 # Two agents on one repo, to show how the list tells them apart.
 fake plan    claude-idle.txt  '✳ mapear configuracoes'                orbita
 fake review  claude-idle-done-clock.txt '✳ revisar estrutura'         orbita

@@ -49,14 +49,17 @@ func (s State) String() string {
 
 // Agent is one live coding agent running in a pane.
 type Agent struct {
-	Pane    tmux.Pane
-	Harness string // "claude" | "omp"
-	Label   string // directory basename, the name you think of it by
-	Task    string // what it is doing, from the pane title
-	State   State
-	Detail  string // elapsed time, "rascunho pendente", ...
-	Elapsed time.Duration
-	Pinned  bool
+	Pane     tmux.Pane
+	Harness  string // "claude" | "omp"
+	Label    string // directory basename, the name you think of it by
+	Task     string // what it is doing, from the pane title
+	State    State
+	Detail   string // elapsed time, "rascunho pendente", ...
+	Elapsed  time.Duration
+	Branch   string // empty when the directory is not a repository
+	Dirty    bool   // the branch has uncommitted changes
+	Worktree bool   // a linked worktree rather than the main checkout
+	Pinned   bool
 }
 
 // Current reports whether this agent's pane is the active one.
@@ -76,6 +79,9 @@ type Adapter interface {
 	Classify(p tmux.Pane, tail []string) (State, string, time.Duration)
 	// Task extracts the task description from the pane title.
 	Task(p tmux.Pane) string
+	// Branch reads the branch out of the harness's own interface, when it
+	// shows one. These lines are already in hand, so it saves asking git.
+	Branch(tail []string) (name string, dirty bool, ok bool)
 }
 
 // Adapters is every harness ag-mux knows about.

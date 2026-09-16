@@ -120,8 +120,43 @@ func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
 	if dpad < 0 {
 		dpad = 0
 	}
-	return []string{line, "   " + styTask.Render(detail) +
+	rows := []string{line, "   " + styTask.Render(detail) +
 		strings.Repeat(" ", dpad) + styWarn.Render(right)}
+	if repo := repoLine(a, w); repo != "" {
+		rows = append(rows, repo)
+	}
+	return rows
+}
+
+// repoLine says which copy of a repository the agent is working in: the branch
+// and, when it matters, that this is a linked worktree rather than the main
+// checkout. The worktree mark is pinned right so a long branch name truncates
+// before it does.
+func repoLine(a agent.Agent, w int) string {
+	if a.Branch == "" && !a.Worktree {
+		return ""
+	}
+	mark := ""
+	if a.Worktree {
+		mark = "⧉ worktree"
+	}
+	left := ""
+	if a.Branch != "" {
+		left = "⎇ " + a.Branch
+		if a.Dirty {
+			left += "*"
+		}
+	}
+	avail := w - 3 - lipgloss.Width(mark)
+	if mark != "" {
+		avail -= 2
+	}
+	left = truncate(left, avail)
+	pad := w - 3 - lipgloss.Width(left) - lipgloss.Width(mark)
+	if pad < 1 {
+		pad = 1
+	}
+	return "   " + styBranch.Render(left) + strings.Repeat(" ", pad) + styWorktree.Render(mark)
 }
 
 // footer renders the prompt or the key help, wrapped to the pane width. The

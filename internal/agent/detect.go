@@ -6,8 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paraizofelipe/ag-mux/internal/git"
 	"github.com/paraizofelipe/ag-mux/internal/tmux"
 )
+
+// gitLookup is a variable so tests can run without touching the filesystem.
+var gitLookup = git.Lookup
 
 // CaptureLines is how much scrollback an adapter gets. Harness chrome lives at
 // the bottom of the screen, so this only has to reach past one long block of
@@ -56,7 +60,7 @@ func detectOne(p tmux.Pane, capture Capturer) (Agent, bool) {
 			return Agent{}, false
 		}
 		state, detail, elapsed := ad.Classify(p, tail)
-		return Agent{
+		a := Agent{
 			Pane:    p,
 			Harness: ad.Name(),
 			Label:   label(p),
@@ -64,7 +68,17 @@ func detectOne(p tmux.Pane, capture Capturer) (Agent, bool) {
 			State:   state,
 			Detail:  detail,
 			Elapsed: elapsed,
-		}, true
+		}
+		a.Branch, a.Dirty, _ = ad.Branch(tail)
+		// git fills in what the harness does not show, and is the only source
+		// for whether this is a worktree. Cached, so it is nearly free.
+		if info, ok := gitLookup(p.Path); ok {
+			if a.Branch == "" {
+				a.Branch = info.Branch
+			}
+			a.Worktree = info.Worktree
+		}
+		return a, true
 	}
 	return Agent{}, false
 }
