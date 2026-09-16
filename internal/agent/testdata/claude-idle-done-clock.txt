@@ -1,0 +1,14 @@
+  Respondi as três perguntas sobre a estrutura de pastas.
+
+  ⎿  Done (15 tool uses · 29.2k tokens · 34s)
+
+  ※ recap: sessão de dúvidas sobre organização do repositório.
+    Próximo passo: você manda a próxima pergunta. (disable recaps in /config)
+✻ Cooked for 2m 10s · done 3:18 PM
+                                                                        ✔ Update installed · Restart to update
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [Opus 5 (1M context)] │ atlas
+  Context █░░░░░░░░░ 7% │ Usage 7d: ██░░░░░░░░ 22% (resets in 2d 2h)
+  ⏸ plan mode on (shift+tab to cycle) · ← for agents

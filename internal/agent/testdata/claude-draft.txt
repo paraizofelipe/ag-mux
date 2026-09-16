@@ -1,0 +1,15 @@
+  Resumo do que mudei:
+
+  - Os filtros agora aceitam mais de um valor por campo.
+  - A ordenação passou a ser estável quando há empate.
+  - 41 testes verdes.
+
+  Quer que eu trate também o caso de campo vazio, ou paramos por aqui?
+✻ Cooked for 1m 27s
+                                                                        ~389k uncached · /clear to start fresh
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ trata tambem o caso de campo vazio
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [Opus 4.8] │ farol git:(main*)
+  Context ████░░░░░░ 39% │ Usage ░░░░░░░░░░ 4%
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents

@@ -1,0 +1,18 @@
+  Vou verificar como o módulo de exportação monta o cabeçalho.
+
+  ⎿  Read src/export/header.go (48 linhas)
+     func BuildHeader(cfg Config) ([]byte, error) {
+         if cfg.Title == "" {
+             return nil, ErrMissingTitle
+     …
+
+  O cabeçalho já valida o título, então o erro vem de outro lugar.
+  Procurando quem chama BuildHeader sem preencher Title.
+✢ Wandering… (8m 3s · ↓ 28.4k tokens)
+  ⎿  Tip: Use /btw to ask a quick side question without interrupting Claude's current work
+───────────────────────────────────────────────────────────────────────────────────────── ajustar exportacao ─
+❯ 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [Opus 5 (1M context)] │ atlas
+  Context █░░░░░░░░░ 10% │ Usage ████░░░░░░ 42% (resets in 2h 17m)
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents

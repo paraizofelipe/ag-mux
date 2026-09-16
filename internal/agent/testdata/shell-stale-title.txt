@@ -1,0 +1,12 @@
+ dev  ~   ls -la
+total 0
+drwxr-xr-x@ 12 dev  staff   384 Jan  8 10:12 .
+drwxr-xr-x   6 root staff   192 Jan  2 09:00 ..
+drwx------   5 dev  staff   160 Jan  7 18:40 Desktop
+drwx------   7 dev  staff   224 Jan  6 00:18 Documents
+drwx------  12 dev  staff   384 Jan  5 23:54 Downloads
+drwx------   4 dev  staff   128 Dec 12  2025 Movies
+drwx------   4 dev  staff   128 Dec 27  2025 Music
+drwxr-xr-x   3 dev  staff    96 Dec 10  2025 go
+drwxr-xr-x  34 dev  staff  1088 Jan  1 01:35 projects
+ dev  ~   

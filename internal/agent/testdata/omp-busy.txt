@@ -1,0 +1,12 @@
+╭────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ O arquivo de configuração define os perfis disponíveis e qual deles                                         │
+│ é carregado por padrão quando nenhum é informado na linha de comando.                                       │
+│ … 236 more lines ⟨Ctrl+O: Expand⟩                                                                          │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ Inspecting config and prompt customization
+  Read ~/.config/exemplo/config.yml
+  󱊷 Lendo configuração efetiva
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⠸ 26s  · 󰪥 modelo-exemplo ·  pomar ·  main ·  15.1%/272K 󰁨 · 󰙺 0.11
