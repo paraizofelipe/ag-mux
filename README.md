@@ -7,12 +7,14 @@ qual está trabalhando e qual parou esperando você, e pula pra ele.
 AGENTES                             1! 3
 ────────────────────────────────────────
 ▸✳ proj                                ●
-   implementar filtros
-   ⎇ main*
- ✳ wt                                  ⣾
+   implementar filtros            12m16s
+   ⎇ main
+────────────────────────────────────────
+ ✳ wt                                  ⣻
    revisar exportacao              8m03s
    ⎇ recurso-novo             ⧉ worktree
- π pomar                               ⣾
+────────────────────────────────────────
+ π pomar                               ⣻
    escrever testes de integracao     26s
    ⎇ main
 ────────────────────────────────────────

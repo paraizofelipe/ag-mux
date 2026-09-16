@@ -25,9 +25,7 @@ func (m Model) View() tea.View {
 	case len(m.agents) == 0:
 		top = append(top, styTask.Render(truncate("nenhum agente nesta sessão", w)))
 	default:
-		for i, a := range m.agents {
-			top = append(top, m.agentRows(a, i == m.cursor, w)...)
-		}
+		top = append(top, m.agentList(w)...)
 	}
 
 	// The help sits at the bottom of the pane so it does not shift every time
@@ -72,6 +70,23 @@ func (m Model) header(w int) string {
 		countStyle = lipgloss.NewStyle().Foreground(colRed).Bold(true)
 	}
 	return styHeader.Render(left) + strings.Repeat(" ", pad) + countStyle.Render(right)
+}
+
+// agentList renders every agent, separated by a rule.
+//
+// The rule goes only *between* neighbours: above the first and below the last
+// the header and footer rules already sit, and doubling them would read as an
+// empty entry.
+func (m Model) agentList(w int) []string {
+	divider := stySep.Render(strings.Repeat("─", w))
+	var out []string
+	for i, a := range m.agents {
+		if i > 0 {
+			out = append(out, divider)
+		}
+		out = append(out, m.agentRows(a, i == m.cursor, w)...)
+	}
+	return out
 }
 
 // agentRows renders one agent: a name line and a second line with what it is

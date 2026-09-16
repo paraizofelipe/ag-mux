@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -83,4 +84,58 @@ func stripANSI(s string) string {
 		b.WriteByte(s[i])
 	}
 	return b.String()
+}
+
+// The rule belongs between agents only: one above the first or below the last
+// would sit against the header/footer rules and read as an empty entry.
+func TestAgentListSeparators(t *testing.T) {
+	isRule := func(s string) bool { return strings.Contains(stripANSI(s), "──") }
+
+	for _, n := range []int{0, 1, 2, 5} {
+		m := Model{}
+		for i := range n {
+			m.agents = append(m.agents, mkAgent(fmt.Sprintf("a%d", i), agent.StateIdle, false))
+		}
+		rows := m.agentList(40)
+
+		got := 0
+		for _, r := range rows {
+			if isRule(r) {
+				got++
+			}
+		}
+		want := n - 1
+		if n == 0 {
+			want = 0
+		}
+		if got != want {
+			t.Errorf("%d agentes: %d réguas, queria %d", n, got, want)
+		}
+		if n > 0 {
+			if isRule(rows[0]) {
+				t.Errorf("%d agentes: régua antes do primeiro", n)
+			}
+			if isRule(rows[len(rows)-1]) {
+				t.Errorf("%d agentes: régua depois do último", n)
+			}
+		}
+	}
+}
+
+// A rule that is not exactly the pane width either wraps or leaves a notch.
+func TestSeparatorWidth(t *testing.T) {
+	m := Model{agents: []agent.Agent{
+		mkAgent("a", agent.StateIdle, false),
+		mkAgent("b", agent.StateIdle, false),
+	}}
+	for _, w := range []int{20, 30, 40, 60} {
+		for _, r := range m.agentList(w) {
+			if !strings.Contains(stripANSI(r), "──") {
+				continue
+			}
+			if got := lipgloss.Width(r); got != w {
+				t.Errorf("w=%d: régua com %d colunas", w, got)
+			}
+		}
+	}
 }

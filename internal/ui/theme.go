@@ -18,9 +18,12 @@ var (
 )
 
 var (
-	styHeader   = lipgloss.NewStyle().Foreground(colOrange).Bold(true)
-	styCount    = lipgloss.NewStyle().Foreground(colDim)
-	styRule     = lipgloss.NewStyle().Foreground(lipgloss.Color("#504945"))
+	styHeader = lipgloss.NewStyle().Foreground(colOrange).Bold(true)
+	styCount  = lipgloss.NewStyle().Foreground(colDim)
+	styRule   = lipgloss.NewStyle().Foreground(lipgloss.Color("#504945"))
+	// Dimmer than styRule: the rules around the list are structure, the ones
+	// between agents are only separation, and they must not compete.
+	stySep      = lipgloss.NewStyle().Foreground(lipgloss.Color("#3c3836"))
 	styLabel    = lipgloss.NewStyle().Foreground(colFg)
 	styLabelSel = lipgloss.NewStyle().Foreground(colOrange).Bold(true)
 	styTask     = lipgloss.NewStyle().Foreground(colDim)
