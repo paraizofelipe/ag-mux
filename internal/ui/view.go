@@ -81,17 +81,20 @@ func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
 	if selected {
 		cursor = "▸"
 	}
+	// The marker column holds the state and nothing else. It used to be shared
+	// with a "you are here" arrow, which was wrong twice over: the arrow
+	// replaced the state on the one agent you look at most, and ◀ is an East
+	// Asian Ambiguous glyph, so terminals draw it two cells wide while every
+	// width calculation counts it as one — it printed over its neighbour.
 	marker := stateIcon(a.State, m.frame)
-	if a.Current() {
-		marker = styCurrent.Render("◀")
-	}
+	mw := lipgloss.Width(marker)
 
 	name := a.Label
 	if a.Pinned {
 		name = "◆ " + name
 	}
-	name = truncate(name, w-4)
-	pad := w - 3 - lipgloss.Width(name) - 1
+	name = truncate(name, w-3-mw)
+	pad := w - 3 - lipgloss.Width(name) - mw
 	if pad < 0 {
 		pad = 0
 	}

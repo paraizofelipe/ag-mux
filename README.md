@@ -21,7 +21,7 @@ q sair
 ```
 
 `1! 3` = 3 agentes, 1 precisa de você.
-`⣾` trabalhando · `●` precisa de você · `○` ocioso · `◀` o pane em que você está.
+`⣾` trabalhando · `●` precisa de você · `○` ocioso.
 `⎇` a branch (com `*` se houver mudanças não commitadas) · `⧉` é um worktree ligado,
 não o checkout principal.
 
