@@ -59,7 +59,10 @@ func detectOne(p tmux.Pane, capture Capturer) (Agent, bool) {
 		if err != nil || !ad.Confirm(tail) {
 			return Agent{}, false
 		}
-		state, detail, elapsed := ad.Classify(p, tail)
+		// The harness may also have reported its own state through its
+		// lifecycle hooks; the pane option carrying it rode along with
+		// list-panes, so reading it cost nothing.
+		state, detail, elapsed, source := Explain(ad, p, tail, timeNow()).FinalState()
 		a := Agent{
 			Pane:    p,
 			Harness: ad.Name(),
@@ -68,6 +71,7 @@ func detectOne(p tmux.Pane, capture Capturer) (Agent, bool) {
 			State:   state,
 			Detail:  detail,
 			Elapsed: elapsed,
+			Source:  source,
 		}
 		a.Branch, a.Dirty, _ = ad.Branch(tail)
 		// git fills in what the harness does not show, and is the only source

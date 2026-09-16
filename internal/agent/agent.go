@@ -56,6 +56,7 @@ type Agent struct {
 	State    State
 	Detail   string // elapsed time, "rascunho pendente", ...
 	Elapsed  time.Duration
+	Source   Source // which signal decided State
 	Branch   string // empty when the directory is not a repository
 	Dirty    bool   // the branch has uncommitted changes
 	Worktree bool   // a linked worktree rather than the main checkout

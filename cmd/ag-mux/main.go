@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/paraizofelipe/ag-mux/internal/agent"
 	"github.com/paraizofelipe/ag-mux/internal/tmux"
@@ -20,6 +21,7 @@ uso:
   ag-mux follow    traz a sidebar pra janela atual (chamado por hook)
   ag-mux reap      fecha janelas que só têm a sidebar (chamado por hook)
   ag-mux doctor    mostra o que a detecção enxerga em cada pane
+  ag-mux hook      liga os hooks do Claude Code (-install / -uninstall)
   ag-mux version
 `
 
@@ -40,6 +42,8 @@ func main() {
 		err = runReap(os.Args[2:])
 	case "doctor":
 		err = runDoctor(os.Args[2:])
+	case "hook":
+		err = runHook(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	default:
@@ -109,15 +113,21 @@ func runDoctor(args []string) error {
 				fmt.Printf("  (chrome ausente no rodapé — título obsoleto)\n")
 			} else {
 				fmt.Println()
-				state, detail, elapsed := ad.Classify(p, tail)
-				fmt.Printf("      3. estado: %s", state)
-				if elapsed > 0 {
-					fmt.Printf("  há %s", elapsed)
+				e := agent.Explain(ad, p, tail, time.Now())
+
+				state, detail, elapsed := e.ScreenState()
+				fmt.Printf("      3. tela: %s%s\n", state, describe(detail, elapsed))
+
+				hState, hDetail, hAge, hasHook := e.HookState()
+				if hasHook {
+					fmt.Printf("      4. hook: %s%s\n", hState, describe(hDetail, hAge))
+				} else {
+					fmt.Printf("      4. hook: nada (rode 'ag-mux hook -install')\n")
 				}
-				if detail != "" {
-					fmt.Printf("  (%s)", detail)
-				}
-				fmt.Printf("\n      tarefa: %q\n", ad.Task(p))
+
+				fState, fDetail, fElapsed, source := e.FinalState()
+				fmt.Printf("      → estado: %s%s  [%s]\n", fState, describe(fDetail, fElapsed), source)
+				fmt.Printf("      tarefa: %q\n", ad.Task(p))
 				live++
 			}
 			if *showTail {
@@ -135,6 +145,19 @@ func runDoctor(args []string) error {
 	}
 	fmt.Printf("%d agente(s) vivo(s)\n", live)
 	return nil
+}
+
+// describe renders the detail and elapsed that hang off a state, omitting
+// whichever is absent.
+func describe(detail string, d time.Duration) string {
+	out := ""
+	if d > 0 {
+		out += "  há " + d.String()
+	}
+	if detail != "" {
+		out += "  (" + detail + ")"
+	}
+	return out
 }
 
 func tailOf(lines []string, n int) []string {

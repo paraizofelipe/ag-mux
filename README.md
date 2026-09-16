@@ -159,6 +159,60 @@ Três estágios, do mais barato pro mais caro:
 
 Quando nenhuma regra casa, o estado aparece como `?` em vez de um palpite.
 
+## Hooks do Claude Code
+
+Ler a tela tem um limite duro: um diálogo de permissão e uma caixa de input
+ociosa são a mesma coisa — um chevron dentro de uma moldura. É por isso que um
+agente travado pedindo permissão podia aparecer como ocioso.
+
+O Claude Code sabe a resposta e pode dizer. `ag-mux hook -install` liga os
+hooks dele:
+
+```sh
+ag-mux hook             # mostra o que seria instalado, pra você conferir antes
+ag-mux hook -install    # mescla em ~/.claude/settings.json (com backup)
+ag-mux hook -uninstall  # desfaz
+```
+
+| Evento | Vira |
+|---|---|
+| `SessionStart` | ocioso |
+| `UserPromptSubmit` | trabalhando |
+| `PermissionRequest` | **precisa de você** |
+| `Notification` (`permission_prompt`, `idle_prompt`, `agent_needs_input`) | **precisa de você** |
+| `Stop`, `StopFailure` | ocioso |
+| `SessionEnd` | limpa |
+
+O hook escreve numa **opção do pane**, `@ag-mux-hook`, e não num arquivo nem
+num socket. Isso não é economia de código: a sidebar já roda um `list-panes`
+por varredura, e ler mais um campo ali custa zero — o estado chega junto com o
+resto, sem processo novo. E uma opção de pane morre com o pane, então não há
+arquivo órfão nem estado obsoleto pra expirar.
+
+Nada disso substitui a leitura de tela, porque as duas fontes falham de
+maneiras opostas. O hook só fala nos eventos em que está ligado: um `ESC` no
+meio de um turno, ou um crash, deixam a última palavra dele valendo sem
+ninguém pra corrigir. A tela é redesenhada a cada frame, então não envelhece —
+mas não distingue permissão de ociosidade.
+
+Então cada uma decide onde é forte: **o hook manda em "precisa de você"**, e a
+tela manda no resto — inclusive desfazendo um "precisa de você" vencido assim
+que o spinner volta, que é exatamente o que acontece no instante em que você
+responde. `ag-mux doctor` mostra as duas leituras e qual ganhou:
+
+```
+      3. tela: ocioso
+      4. hook: precisa de você  há 4m0s  (permissão)
+      → estado: precisa de você  há 4m0s  (permissão)  [hook]
+```
+
+De quebra, o hook traz um número que a tela não tem: **há quanto tempo** o
+agente está travado. É a diferença entre "alguém precisa de mim" e "alguém
+está parado há 12 minutos e eu não vi".
+
+O script é `hooks/ag-mux-hook.sh`, quatro linhas de `sh`. Ele nunca escreve na
+saída e sai com 0 em todo caminho — um hook que erra é um harness que engasga.
+
 ## Testar
 
 ### Sandbox, sem tocar na sua configuração
@@ -240,8 +294,9 @@ ajuste o adapter até passar.
   daquela sessão.)
 - Só pode estar em uma janela por vez: com dois clientes tmux vendo janelas
   diferentes, ela aparece em apenas um.
-- O diálogo de permissão do Claude Code é detectado por melhor esforço: a regra
-  foi escrita sem uma captura real do estado. Se um agente travado numa pergunta
-  aparecer como ocioso, é essa regra que precisa de calibração.
+- Sem os hooks instalados, o diálogo de permissão do Claude Code é detectado
+  por melhor esforço: a regra foi escrita sem uma captura real do estado. Se um
+  agente travado numa pergunta aparecer como ocioso, `ag-mux hook -install`
+  resolve de vez; senão, é essa regra que precisa de calibração.
 - O OMP distingue trabalhando de ocioso, mas não "esperando resposta sua" —
   ambos aparecem como ocioso.

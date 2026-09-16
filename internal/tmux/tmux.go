@@ -19,6 +19,13 @@ const sep = "\x1fAGMUX\x1f"
 // from any window and keep it out of the agent list.
 const SidebarOption = "@ag-mux-sidebar"
 
+// HookOption carries what a harness's own lifecycle hooks last reported about
+// the pane, written by hooks/ag-mux-hook.sh. It is a pane option rather than a
+// file or a socket for two reasons: it arrives with the list-panes the sidebar
+// already runs, so reading it costs nothing, and it dies with the pane, so
+// there is no stale state to expire.
+const HookOption = "@ag-mux-hook"
+
 var paneFormat = strings.Join([]string{
 	"#{pane_id}",
 	"#{window_id}",
@@ -35,6 +42,7 @@ var paneFormat = strings.Join([]string{
 	"#{pane_height}",
 	"#{window_zoomed_flag}",
 	"#{" + SidebarOption + "}",
+	"#{" + HookOption + "}",
 }, sep)
 
 // Pane is one row of list-panes.
@@ -54,6 +62,7 @@ type Pane struct {
 	Height      int
 	WindowZoom  bool
 	IsSidebar   bool
+	Hook        string
 }
 
 // Target addresses this pane in later tmux commands.
@@ -107,8 +116,8 @@ func listPanes(args []string) ([]Pane, error) {
 
 func parsePane(line string) (Pane, error) {
 	f := strings.Split(line, sep)
-	if len(f) != 15 {
-		return Pane{}, fmt.Errorf("expected 15 fields, got %d", len(f))
+	if len(f) != 16 {
+		return Pane{}, fmt.Errorf("expected 16 fields, got %d", len(f))
 	}
 	atoi := func(s string) int { n, _ := strconv.Atoi(s); return n }
 	return Pane{
@@ -127,6 +136,7 @@ func parsePane(line string) (Pane, error) {
 		Height:      atoi(f[12]),
 		WindowZoom:  f[13] == "1",
 		IsSidebar:   f[14] == "1",
+		Hook:        f[15],
 	}, nil
 }
 
