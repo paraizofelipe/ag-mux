@@ -49,10 +49,15 @@ func addSession(t *testing.T, path, id, dir, title, agent string, updated time.T
 // is still in flight, which is exactly how opencode stores it.
 func addMessage(t *testing.T, path, id, session string, created, touched time.Time, completed time.Time) {
 	t.Helper()
-	data := fmt.Sprintf(`{"role":"assistant","time":{"created":%d}}`, ms(created))
+	addRole(t, path, id, session, "assistant", created, touched, completed)
+}
+
+func addRole(t *testing.T, path, id, session, role string, created, touched time.Time, completed time.Time) {
+	t.Helper()
+	data := fmt.Sprintf(`{"role":"%s","time":{"created":%d}}`, role, ms(created))
 	if !completed.IsZero() {
-		data = fmt.Sprintf(`{"role":"assistant","time":{"created":%d,"completed":%d}}`,
-			ms(created), ms(completed))
+		data = fmt.Sprintf(`{"role":"%s","time":{"created":%d,"completed":%d}}`,
+			role, ms(created), ms(completed))
 	}
 	run(t, path, fmt.Sprintf(`INSERT INTO message VALUES ('%s','%s',%d,%d,'%s');`,
 		id, session, ms(created), ms(touched), data))
@@ -252,5 +257,37 @@ func TestLookupIgnoresSessionsOlderThanTheProcess(t *testing.T) {
 	}
 	if st.Session.Title != "conversa de agora" {
 		t.Errorf("título = %q", st.Session.Title)
+	}
+}
+
+// One question sends opencode to the model many times, each round-trip its own
+// assistant message. Timing the newest one restarts the clock every few
+// seconds; the turn starts at the question.
+func TestWorkingTimesTheTurnNotTheStep(t *testing.T) {
+	clock := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	db := newDB(t)
+	addSession(t, db, "s1", "/w/proj", "reescrever o exportador", "build", clock)
+
+	asked := clock.Add(-3 * time.Minute)
+	addRole(t, db, "u1", "s1", "user", asked, asked, time.Time{})
+	// Nine finished round-trips, then one still running.
+	step := asked
+	for i := range 9 {
+		step = asked.Add(time.Duration(i+1) * 15 * time.Second)
+		addRole(t, db, fmt.Sprintf("a%d", i), "s1", "assistant", step, step.Add(10*time.Second), step.Add(10*time.Second))
+	}
+	live := step.Add(15 * time.Second)
+	addRole(t, db, "a9", "s1", "assistant", live, clock.Add(-5*time.Second), time.Time{})
+
+	useDB(t, db, clock)
+	st, ok := Lookup("/w/proj", time.Time{})
+	if !ok {
+		t.Fatal("não achou a sessão")
+	}
+	if !st.Working {
+		t.Fatal("devia estar trabalhando")
+	}
+	if got := clock.Sub(st.Since); got != 3*time.Minute {
+		t.Errorf("trabalhando há %v, queria 3m (desde a pergunta, não desde o passo)", got)
 	}
 }

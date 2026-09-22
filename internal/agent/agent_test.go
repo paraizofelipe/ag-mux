@@ -222,3 +222,23 @@ func TestClaudeBranchFromChrome(t *testing.T) {
 		})
 	}
 }
+
+// Claude redraws its spinner in place, but a frame can survive above the live
+// one in the captured tail. Reading the first match reports a time that jumps
+// backwards as the screen moves.
+func TestClaudeUsesBottomSpinner(t *testing.T) {
+	tail := []string{
+		"✻ Levitating… (12s · ↓ 1.1k tokens)",
+		"  ⎿  algum output de ferramenta",
+		"✻ Levitating… (3m 9s · ↓ 5.1k tokens)",
+		"  Context ████░░ 40% │ Usage ░░ 1%",
+		"  ⏵⏵ bypass permissions on (shift+tab to cycle)",
+	}
+	state, _, elapsed := Claude{}.Classify(tmux.Pane{}, tail)
+	if state != StateBusy {
+		t.Fatalf("estado = %v", state)
+	}
+	if want := 3*time.Minute + 9*time.Second; elapsed != want {
+		t.Errorf("elapsed = %v, queria %v (o spinner de baixo é o vivo)", elapsed, want)
+	}
+}

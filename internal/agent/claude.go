@@ -63,8 +63,11 @@ func (Claude) Confirm(tail []string) bool {
 func (Claude) Classify(p tmux.Pane, tail []string) (State, string, time.Duration) {
 	recent := tailLines(tail, 15)
 
-	for _, l := range recent {
-		if m := claudeBusyRe.FindStringSubmatch(l); m != nil {
+	// Bottom-most spinner wins. The live one is the last thing Claude draws;
+	// an earlier one in the tail is a frame that scrolled by, and taking it
+	// reports a time that jumps backwards as the screen moves.
+	for i := len(recent) - 1; i >= 0; i-- {
+		if m := claudeBusyRe.FindStringSubmatch(recent[i]); m != nil {
 			d := parseElapsed(m[1])
 			return StateBusy, strings.TrimSpace(m[1]), d
 		}

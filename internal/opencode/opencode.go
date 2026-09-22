@@ -111,6 +111,7 @@ type row struct {
 	Agent   string `json:"agent"`
 	Last    string `json:"last"`    // the newest message's JSON, "" when none
 	Touched int64  `json:"touched"` // that message's time_updated, epoch ms
+	Turn    int64  `json:"turn"`    // the newest user message, epoch ms
 	Updated int64  `json:"updated"` // the session's time_updated, epoch ms
 }
 
@@ -134,6 +135,10 @@ const query = `SELECT s.id AS id,
        coalesce((SELECT m.time_updated FROM message m
                   WHERE m.session_id = s.id
                   ORDER BY m.time_created DESC LIMIT 1), 0) AS touched,
+       coalesce((SELECT m.time_created FROM message m
+                  WHERE m.session_id = s.id
+                    AND json_extract(m.data, '$.role') = 'user'
+                  ORDER BY m.time_created DESC LIMIT 1), 0) AS turn,
        s.time_updated AS updated
   FROM session s
  WHERE s.directory IN (%s)
@@ -186,7 +191,14 @@ func probe(dir string, notBefore time.Time) (Status, bool) {
 		return st, true // the turn stopped being written; it was interrupted
 	}
 	st.Working = true
+	// Measure from the question, not from the current step. One question
+	// makes opencode go to the model many times — ten assistant messages of
+	// about five seconds each, in the sessions on hand — and timing the last
+	// one restarts the clock on every tool call.
 	st.Since = millis(m.Time.Created)
+	if r.Turn > 0 && r.Turn <= m.Time.Created {
+		st.Since = millis(r.Turn)
+	}
 	return st, true
 }
 
