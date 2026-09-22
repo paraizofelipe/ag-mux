@@ -29,22 +29,28 @@ var shells = map[string]bool{
 	"ksh": true, "dash": true, "-zsh": true, "-bash": true, "login": true,
 }
 
+// observer is an adapter that needs to see every pane before it classifies
+// any of them — because what one pane means can depend on another existing.
+type observer interface{ Observe(panes []tmux.Pane) }
+
 // Detect turns panes into the agents actually running in them.
 func Detect(panes []tmux.Pane, capture Capturer) []Agent {
+	ads := Adapters()
+	Observe(ads, panes)
 	var agents []Agent
 	for _, p := range panes {
-		if a, ok := detectOne(p, capture); ok {
+		if a, ok := detectOne(ads, p, capture); ok {
 			agents = append(agents, a)
 		}
 	}
 	return agents
 }
 
-func detectOne(p tmux.Pane, capture Capturer) (Agent, bool) {
+func detectOne(ads []Adapter, p tmux.Pane, capture Capturer) (Agent, bool) {
 	if p.IsSidebar {
 		return Agent{}, false
 	}
-	for _, ad := range Adapters() {
+	for _, ad := range ads {
 		if !ad.IsCandidate(p) {
 			continue
 		}
@@ -55,9 +61,15 @@ func detectOne(p tmux.Pane, capture Capturer) (Agent, bool) {
 		if shells[p.Command] {
 			return Agent{}, false
 		}
-		tail, err := capture(p.ID, CaptureLines)
-		if err != nil || !ad.Confirm(tail) {
-			return Agent{}, false
+		// An adapter that reads its harness from somewhere other than the
+		// screen never pays for a capture, and nothing it reports can break
+		// when that harness is redrawn.
+		var tail []string
+		if ad.NeedsScreen() {
+			var err error
+			if tail, err = capture(p.ID, CaptureLines); err != nil || !ad.Confirm(tail) {
+				return Agent{}, false
+			}
 		}
 		// The harness may also have reported its own state through its
 		// lifecycle hooks; the pane option carrying it rode along with
@@ -136,4 +148,14 @@ func parseElapsed(s string) time.Duration {
 		}
 	}
 	return d
+}
+
+// Observe lets adapters that need the whole pane list see it. Detect does this
+// itself; doctor calls it so what it prints is what the sidebar decided.
+func Observe(ads []Adapter, panes []tmux.Pane) {
+	for _, ad := range ads {
+		if o, ok := ad.(observer); ok {
+			o.Observe(panes)
+		}
+	}
 }

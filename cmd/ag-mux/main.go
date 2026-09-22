@@ -84,6 +84,9 @@ func runDoctor(args []string) error {
 		return err
 	}
 
+	adapters := agent.Adapters()
+	agent.Observe(adapters, panes)
+
 	fmt.Printf("%d panes, %s\n\n", len(panes), scope)
 	live := 0
 	for _, p := range panes {
@@ -95,28 +98,42 @@ func runDoctor(args []string) error {
 			continue
 		}
 		claimed := false
-		for _, ad := range agent.Adapters() {
+		for _, ad := range adapters {
 			if !ad.IsCandidate(p) {
 				continue
 			}
 			claimed = true
 			fmt.Printf("      1. candidato a %s: sim\n", ad.Name())
 
-			tail, err := tmux.CapturePane(p.ID, agent.CaptureLines)
-			if err != nil {
-				fmt.Printf("      2. captura falhou: %v\n\n", err)
-				break
-			}
-			ok := ad.Confirm(tail)
-			fmt.Printf("      2. vivo: %v", ok)
-			if !ok {
-				fmt.Printf("  (chrome ausente no rodapé — título obsoleto)\n")
+			var tail []string
+			ok := true
+			if ad.NeedsScreen() {
+				var err error
+				if tail, err = tmux.CapturePane(p.ID, agent.CaptureLines); err != nil {
+					fmt.Printf("      2. captura falhou: %v\n\n", err)
+					break
+				}
+				ok = ad.Confirm(tail)
+				fmt.Printf("      2. vivo: %v", ok)
+				if !ok {
+					fmt.Printf("  (chrome ausente no rodapé — título obsoleto)\n")
+				}
 			} else {
+				fmt.Printf("      2. vivo: true  (o processo é o %s; nada é lido da tela)", ad.Name())
+			}
+			if ok {
 				fmt.Println()
 				e := agent.Explain(ad, p, tail, time.Now())
 
+				// Name the source honestly: an adapter that reads a database
+				// must not be reported as having read the screen, or the next
+				// person calibrating chases the wrong rule.
+				own := "banco"
+				if ad.NeedsScreen() {
+					own = "tela"
+				}
 				state, detail, elapsed := e.ScreenState()
-				fmt.Printf("      3. tela: %s%s\n", state, describe(detail, elapsed))
+				fmt.Printf("      3. %s: %s%s\n", own, state, describe(detail, elapsed))
 
 				hState, hDetail, hAge, hasHook := e.HookState()
 				if hasHook {
@@ -126,7 +143,11 @@ func runDoctor(args []string) error {
 				}
 
 				fState, fDetail, fElapsed, source := e.FinalState()
-				fmt.Printf("      → estado: %s%s  [%s]\n", fState, describe(fDetail, fElapsed), source)
+				decided := own
+				if source == agent.SourceHook {
+					decided = "hook"
+				}
+				fmt.Printf("      → estado: %s%s  [%s]\n", fState, describe(fDetail, fElapsed), decided)
 				fmt.Printf("      tarefa: %q\n", ad.Task(p))
 				live++
 			}

@@ -45,6 +45,10 @@ func harnessGlyph(harness string) string {
 	switch harness {
 	case "claude":
 		return "✳"
+	case "opencode":
+		// Same Dingbats block as Claude's mark, so it renders at the same
+		// width and needs no font the sidebar is not already relying on.
+		return "✦"
 	default:
 		return "•"
 	}

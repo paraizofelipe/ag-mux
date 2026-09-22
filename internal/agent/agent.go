@@ -73,6 +73,10 @@ type Adapter interface {
 	// IsCandidate reports whether the pane might host this harness, using
 	// only list-panes fields.
 	IsCandidate(p tmux.Pane) bool
+	// NeedsScreen reports whether this harness has to be read off the pane's
+	// screen. An adapter that answers no costs no capture-pane at all, and
+	// nothing it reports can be broken by a redesign of the harness.
+	NeedsScreen() bool
 	// Confirm reports whether the harness is still running, by looking for
 	// its chrome at the bottom of the screen.
 	Confirm(tail []string) bool
@@ -86,7 +90,7 @@ type Adapter interface {
 }
 
 // Adapters is every harness ag-mux knows about.
-func Adapters() []Adapter { return []Adapter{Claude{}} }
+func Adapters() []Adapter { return []Adapter{Claude{}, &OpenCode{}} }
 
 // label is the name a human uses for an agent: the working directory.
 func label(p tmux.Pane) string {

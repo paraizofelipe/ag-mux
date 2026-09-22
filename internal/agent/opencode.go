@@ -1,0 +1,95 @@
+package agent
+
+import (
+	"time"
+
+	"github.com/paraizofelipe/ag-mux/internal/opencode"
+	"github.com/paraizofelipe/ag-mux/internal/tmux"
+)
+
+// opencodeLookup is a variable so tests can run without a database.
+var opencodeLookup = opencode.Lookup
+
+// OpenCode reads opencode panes without looking at one pixel of them.
+//
+// It can afford that because opencode gives two things Claude Code does not.
+// It names itself in the foreground process, so a pane either is an opencode
+// or is not — no title to go stale, no footer to match. And it keeps its own
+// database, which answers what the session is about and whether the current
+// turn is still running.
+//
+// What the database does not have is any notion of a terminal: a session
+// records the directory it was started in and nothing about the process or
+// the pane. So two opencode running in the same directory cannot be told
+// apart from the outside, and this adapter says so rather than picking one.
+type OpenCode struct {
+	// shared holds the directories where more than one opencode pane lives.
+	shared map[string]bool
+}
+
+func (*OpenCode) Name() string { return "opencode" }
+
+// IsCandidate is also the liveness test: the foreground process of the pane is
+// opencode itself, which is true exactly while it runs.
+func (*OpenCode) IsCandidate(p tmux.Pane) bool { return p.Command == "opencode" }
+
+// NeedsScreen is false, so detection never captures these panes.
+func (*OpenCode) NeedsScreen() bool { return false }
+
+// Confirm has nothing left to check: the process is the proof.
+func (*OpenCode) Confirm([]string) bool { return true }
+
+// Observe records which directories host more than one opencode, before any
+// pane is classified.
+func (o *OpenCode) Observe(panes []tmux.Pane) {
+	count := map[string]int{}
+	for _, p := range panes {
+		if !p.IsSidebar && p.Command == "opencode" && p.Path != "" {
+			count[p.Path]++
+		}
+	}
+	o.shared = nil
+	for dir, n := range count {
+		if n < 2 {
+			continue
+		}
+		if o.shared == nil {
+			o.shared = map[string]bool{}
+		}
+		o.shared[dir] = true
+	}
+}
+
+func (o *OpenCode) Classify(p tmux.Pane, _ []string) (State, string, time.Duration) {
+	if o.shared[p.Path] {
+		// Guessing here would show one agent's work under another's name.
+		return StateUnknown, "dois opencode neste diretório", 0
+	}
+	st, ok := opencodeLookup(p.Path)
+	if !ok {
+		// Running, but nothing has been asked of it yet, so there is no
+		// session to read. That is idle, and it is the truth.
+		return StateIdle, "sem sessão ainda", 0
+	}
+	if st.Working {
+		return StateBusy, st.Session.Agent, timeNow().Sub(st.Since).Truncate(time.Second)
+	}
+	return StateIdle, "", 0
+}
+
+// Task is the session title opencode writes for itself. The pane title is no
+// help here: opencode sets it once, to "OpenCode", and never changes it.
+func (o *OpenCode) Task(p tmux.Pane) string {
+	if o.shared[p.Path] {
+		return ""
+	}
+	st, ok := opencodeLookup(p.Path)
+	if !ok {
+		return ""
+	}
+	return st.Session.Title
+}
+
+// Branch defers to git: opencode prints a branch in its footer, but reading it
+// there would trade a guaranteed source for a fragile one.
+func (*OpenCode) Branch([]string) (string, bool, bool) { return "", false, false }

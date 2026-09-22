@@ -25,9 +25,12 @@ não o checkout principal.
 
 ## Harnesses reconhecidos
 
-| Harness | Como é detectado |
-|---|---|
-| Claude Code | título do pane começa com `✳`, processo em primeiro plano é a versão (`2.1.269`) |
+| Harness | Como é detectado | De onde vem o estado |
+|---|---|---|
+| Claude Code | título do pane começa com `✳`, processo em primeiro plano é a versão (`2.1.269`) | tela, ou os hooks dele |
+| opencode | o processo em primeiro plano **é** o `opencode` | o banco do próprio opencode |
+
+`✳` Claude Code · `✦` opencode.
 
 ## Instalação
 
@@ -139,6 +142,10 @@ a ocultar/mostrar. É gerenciado sozinho; não precisa mexer.
 
 ## Como a detecção funciona
 
+Depende do harness, e a diferença importa: **o opencode não é lido da tela em
+nenhum momento** — veja a seção seguinte. O que está descrito aqui é o caminho
+do Claude Code, que não guarda nada consultável de fora.
+
 Três estágios, do mais barato pro mais caro:
 
 1. **Candidato** — o título do pane tem a marca do harness. Sai de graça do
@@ -210,6 +217,55 @@ está parado há 12 minutos e eu não vi".
 
 O script é `hooks/ag-mux-hook.sh`, quatro linhas de `sh`. Ele nunca escreve na
 saída e sai com 0 em todo caminho — um hook que erra é um harness que engasga.
+
+## opencode: nada vem da tela
+
+O opencode dá duas coisas que o Claude Code não dá, e juntas elas dispensam
+ler a interface.
+
+**Ele se identifica no processo.** O `pane_current_command` de um pane com
+opencode é literalmente `opencode`. Isso é presença *e* prova de vida numa
+única leitura que o `list-panes` já fazia — nenhum título para ficar obsoleto,
+nenhum rodapé para casar. É o único harness cuja presença na lista não pode
+quebrar com um redesenho.
+
+**Ele mantém um banco.** `~/.local/share/opencode/opencode.db` é um SQLite que
+o processo segura aberto enquanto roda, e ele responde o que a tela só deixa
+supor:
+
+| Na sidebar | No banco |
+|---|---|
+| a tarefa | `session.title` — o pane title é fixo em `OpenCode` e não serve |
+| trabalhando | a última mensagem `assistant` não tem `time.completed` |
+| há quanto tempo | `agora − time.created` da mesma mensagem |
+
+A leitura é read-only, por uma consulta só, com cache de 2s — o opencode nunca
+é bloqueado nem alterado. Vai pelo binário `sqlite3` em vez de um driver, pelo
+mesmo motivo que `internal/tmux` e `internal/git` falam com ferramentas em vez
+de linkar contra elas.
+
+Um turno interrompido fica registrado sem `time.completed` para sempre, e sem
+cuidado leria como um agente trabalhando há semanas. O desempate é que uma
+volta de verdade reescreve a própria linha o tempo todo — nas sessões que eu
+tinha à mão, **todas** as mensagens de assistant têm `time_updated` depois de
+`time_created`. Então um turno que parou de ser escrito há mais de dois
+minutos deixa de contar como trabalho.
+
+### O que o banco não sabe
+
+Ele amarra uma sessão a um **diretório**, nunca a um processo ou a um pane —
+`path`, `workspace_id` e `metadata` existem mas nenhum é sobre o terminal, e
+isso não é lacuna: o opencode não tem motivo para saber em que terminal roda.
+
+Consequência: dois opencode no mesmo diretório são indistinguíveis de fora. A
+sidebar **não escolhe um** — mostra `?` e diz por quê. Exibir o trabalho de um
+com o nome do outro seria errar em silêncio, que é pior que admitir que não
+sabe.
+
+Pelo mesmo motivo, "travado pedindo permissão" não aparece para o opencode:
+a tabela `permission` guarda permissões *concedidas* (índice único em
+`project_id, action, resource`, sem estado), e o pedido pendente só existe como
+evento, que nada persiste.
 
 ## Testar
 
@@ -286,6 +342,9 @@ ajuste o adapter até passar.
 
 ## Limitações conhecidas
 
+- Dois opencode no mesmo diretório aparecem como `?`: o banco do opencode não
+  registra em que terminal cada sessão roda, então não há como dizer qual é
+  qual sem chutar.
 - Lista só a sessão atual, por decisão de projeto. Agentes em outras sessões não
   aparecem. (Se a sidebar for levada pra outra sessão, ela passa a listar a
   daquela sessão.)

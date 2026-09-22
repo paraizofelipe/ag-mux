@@ -52,6 +52,10 @@ func (Claude) IsCandidate(p tmux.Pane) bool {
 	return strings.HasPrefix(p.Title, claudeMark) || claudeVersionRe.MatchString(p.Command)
 }
 
+// NeedsScreen is true: everything Claude Code reports about itself, short of
+// its lifecycle hooks, is drawn rather than stored.
+func (Claude) NeedsScreen() bool { return true }
+
 func (Claude) Confirm(tail []string) bool {
 	return anyMatch(claudeChromeRe, tailLines(tail, claudeChromeDepth))
 }
