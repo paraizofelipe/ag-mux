@@ -12,7 +12,10 @@ import (
 )
 
 // opencodeLookup is a variable so tests can run without a database.
-var opencodeLookup = opencode.Lookup
+var (
+	opencodeLookup  = opencode.Lookup
+	opencodeSession = opencode.LookupSession
+)
 
 // OpenCode reads opencode panes without looking at one pixel of them.
 //
@@ -64,12 +67,31 @@ func (o *OpenCode) Observe(panes []tmux.Pane) {
 	}
 }
 
-func (o *OpenCode) Classify(p tmux.Pane, _ []string) (State, string, time.Duration) {
+// status resolves which opencode conversation this pane is running.
+//
+// With the plugin installed the pane carries the session id, and there is
+// nothing left to be ambiguous about: the answer is about this pane rather
+// than about the newest session that happens to share its directory. Without
+// it, the directory is all there is, and two opencode sharing one is the case
+// that cannot be resolved from outside.
+func (o *OpenCode) status(p tmux.Pane) (st opencode.Status, ok, ambiguous bool) {
+	if p.AgentSession != "" {
+		st, ok = opencodeSession(p.AgentSession)
+		return st, ok, false
+	}
 	if o.shared[p.Path] {
+		return opencode.Status{}, false, true
+	}
+	st, ok = opencodeLookup(p.Path, sessionFloor(p))
+	return st, ok, false
+}
+
+func (o *OpenCode) Classify(p tmux.Pane, _ []string) (State, string, time.Duration) {
+	st, ok, ambiguous := o.status(p)
+	if ambiguous {
 		// Guessing here would show one agent's work under another's name.
 		return StateUnknown, "dois opencode neste diretório", 0
 	}
-	st, ok := opencodeLookup(p.Path, sessionFloor(p))
 	if !ok {
 		// Running, but nothing has been asked of it yet, so there is no
 		// session to read. That is idle, and it is the truth.
@@ -81,14 +103,17 @@ func (o *OpenCode) Classify(p tmux.Pane, _ []string) (State, string, time.Durati
 	return StateIdle, "", 0
 }
 
+// HookAuthoritative is true: the opencode plugin reports permission.asked and
+// permission.replied, so it closes every state it opens. Nothing read from the
+// database may overrule it — and something would, because a turn paused on a
+// permission prompt still looks like a turn in flight.
+func (*OpenCode) HookAuthoritative() bool { return true }
+
 // Task is the session title opencode writes for itself. The pane title is no
 // help here: opencode sets it once, to "OpenCode", and never changes it.
 func (o *OpenCode) Task(p tmux.Pane) string {
-	if o.shared[p.Path] {
-		return ""
-	}
-	st, ok := opencodeLookup(p.Path, sessionFloor(p))
-	if !ok {
+	st, ok, ambiguous := o.status(p)
+	if ambiguous || !ok {
 		return ""
 	}
 	return st.Session.Title

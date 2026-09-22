@@ -87,12 +87,18 @@ func parseHook(s string) (hookReport, bool) {
 // So each source wins where it is strong. The hook owns "precisa de você". The
 // screen owns everything else, and may overrule a stale "precisa de você" when
 // the spinner comes back, which is what happens the moment you answer.
-func arbitrate(s screenState, h hookReport, ok bool, now time.Time) (screenState, Source) {
+//
+// That last correction only applies to a harness whose reports can go stale.
+// One that reports the end of a wait as well as its start — opencode, through
+// permission.replied — needs no correcting and must not get one: a turn paused
+// on a permission prompt still reads as a turn in flight, so the other source
+// would overrule a report that is simply right.
+func arbitrate(s screenState, h hookReport, ok, authoritative bool, now time.Time) (screenState, Source) {
 	if !ok {
 		return s, SourceScreen
 	}
 	switch {
-	case h.State == StateWaiting && s.State == StateBusy:
+	case h.State == StateWaiting && s.State == StateBusy && !authoritative:
 		// The spinner is back: you answered and the hook has not spoken since.
 		return s, SourceScreen
 
@@ -144,7 +150,7 @@ func Explain(ad Adapter, p tmux.Pane, tail []string, now time.Time) Explanation 
 	state, detail, elapsed := ad.Classify(p, tail)
 	screen := screenState{state, detail, elapsed}
 	hook, hasHook := parseHook(p.Hook)
-	final, source := arbitrate(screen, hook, hasHook, now)
+	final, source := arbitrate(screen, hook, hasHook, ad.HookAuthoritative(), now)
 
 	e := Explanation{Screen: screen, Hook: hook, HasHook: hasHook, Final: final, Source: source}
 	if hasHook {

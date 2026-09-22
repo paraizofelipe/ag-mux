@@ -52,6 +52,11 @@ func (Claude) IsCandidate(p tmux.Pane) bool {
 	return strings.HasPrefix(p.Title, claudeMark) || claudeVersionRe.MatchString(p.Command)
 }
 
+// HookAuthoritative is false: Claude Code has no event for a permission being
+// answered, so a "waiting" report can outlive the wait with nothing to close
+// it. The screen is what corrects that.
+func (Claude) HookAuthoritative() bool { return false }
+
 // NeedsScreen is true: everything Claude Code reports about itself, short of
 // its lifecycle hooks, is drawn rather than stored.
 func (Claude) NeedsScreen() bool { return true }

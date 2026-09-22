@@ -73,6 +73,11 @@ type Adapter interface {
 	// IsCandidate reports whether the pane might host this harness, using
 	// only list-panes fields.
 	IsCandidate(p tmux.Pane) bool
+	// HookAuthoritative reports whether the harness's own reports close every
+	// state they open. When they do, nothing else may overrule them; when they
+	// do not, a report can be left standing by an interrupt and the screen has
+	// to be allowed to correct it.
+	HookAuthoritative() bool
 	// NeedsScreen reports whether this harness has to be read off the pane's
 	// screen. An adapter that answers no costs no capture-pane at all, and
 	// nothing it reports can be broken by a redesign of the harness.

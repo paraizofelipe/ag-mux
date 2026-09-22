@@ -26,6 +26,12 @@ const SidebarOption = "@ag-mux-sidebar"
 // there is no stale state to expire.
 const HookOption = "@ag-mux-hook"
 
+// SessionOption carries the harness's own id for the conversation running in
+// the pane, written by a plugin from inside the process. It is the one thing
+// no amount of looking from outside can establish: opencode records a session
+// against a directory, never against a terminal.
+const SessionOption = "@ag-mux-session"
+
 var paneFormat = strings.Join([]string{
 	"#{pane_id}",
 	"#{window_id}",
@@ -44,27 +50,29 @@ var paneFormat = strings.Join([]string{
 	"#{" + SidebarOption + "}",
 	"#{" + HookOption + "}",
 	"#{pane_pid}",
+	"#{" + SessionOption + "}",
 }, sep)
 
 // Pane is one row of list-panes.
 type Pane struct {
-	ID          string
-	WindowID    string
-	Session     string
-	WindowIndex int
-	WindowName  string
-	Index       int
-	Command     string
-	Title       string
-	Path        string
-	Active      bool
-	WindowAct   bool
-	Width       int
-	Height      int
-	WindowZoom  bool
-	IsSidebar   bool
-	Hook        string
-	PID         int
+	ID           string
+	WindowID     string
+	Session      string
+	WindowIndex  int
+	WindowName   string
+	Index        int
+	Command      string
+	Title        string
+	Path         string
+	Active       bool
+	WindowAct    bool
+	Width        int
+	Height       int
+	WindowZoom   bool
+	IsSidebar    bool
+	Hook         string
+	PID          int
+	AgentSession string
 }
 
 // Target addresses this pane in later tmux commands.
@@ -118,28 +126,29 @@ func listPanes(args []string) ([]Pane, error) {
 
 func parsePane(line string) (Pane, error) {
 	f := strings.Split(line, sep)
-	if len(f) != 17 {
-		return Pane{}, fmt.Errorf("expected 17 fields, got %d", len(f))
+	if len(f) != 18 {
+		return Pane{}, fmt.Errorf("expected 18 fields, got %d", len(f))
 	}
 	atoi := func(s string) int { n, _ := strconv.Atoi(s); return n }
 	return Pane{
-		ID:          f[0],
-		WindowID:    f[1],
-		Session:     f[2],
-		WindowIndex: atoi(f[3]),
-		WindowName:  f[4],
-		Index:       atoi(f[5]),
-		Command:     f[6],
-		Title:       f[7],
-		Path:        f[8],
-		Active:      f[9] == "1",
-		WindowAct:   f[10] == "1",
-		Width:       atoi(f[11]),
-		Height:      atoi(f[12]),
-		WindowZoom:  f[13] == "1",
-		IsSidebar:   f[14] == "1",
-		Hook:        f[15],
-		PID:         atoi(f[16]),
+		ID:           f[0],
+		WindowID:     f[1],
+		Session:      f[2],
+		WindowIndex:  atoi(f[3]),
+		WindowName:   f[4],
+		Index:        atoi(f[5]),
+		Command:      f[6],
+		Title:        f[7],
+		Path:         f[8],
+		Active:       f[9] == "1",
+		WindowAct:    f[10] == "1",
+		Width:        atoi(f[11]),
+		Height:       atoi(f[12]),
+		WindowZoom:   f[13] == "1",
+		IsSidebar:    f[14] == "1",
+		Hook:         f[15],
+		PID:          atoi(f[16]),
+		AgentSession: f[17],
 	}, nil
 }
 

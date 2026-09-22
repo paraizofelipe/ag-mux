@@ -93,7 +93,7 @@ func TestArbitrate(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, src := arbitrate(c.screen, c.hook, c.hasHook, now)
+			got, src := arbitrate(c.screen, c.hook, c.hasHook, false, now)
 			if got != c.want {
 				t.Errorf("estado = %+v, queria %+v", got, c.want)
 			}
@@ -111,9 +111,37 @@ func TestArbitrateClampsNegativeWait(t *testing.T) {
 		screenState{StateIdle, "", 0},
 		hookReport{State: StateWaiting, At: hookEpoch},
 		true,
+		false,
 		hookEpoch.Add(-time.Minute),
 	)
 	if got.Elapsed != 0 {
 		t.Errorf("elapsed = %v, queria 0", got.Elapsed)
+	}
+}
+
+// A harness that reports the end of a wait as well as its start must not be
+// second-guessed. opencode does: a turn paused on a permission prompt still
+// reads as a turn in flight in its database, so without this the sidebar would
+// overrule a report that is simply right.
+func TestAuthoritativeHookIsNotOverruled(t *testing.T) {
+	now := hookEpoch.Add(90 * time.Second)
+	busy := screenState{StateBusy, "", time.Minute}
+	waiting := hookReport{State: StateWaiting, Detail: "permissão", At: hookEpoch}
+
+	got, src := arbitrate(busy, waiting, true, true, now)
+	if got.State != StateWaiting {
+		t.Errorf("estado = %v, queria precisa de você", got.State)
+	}
+	if src != SourceHook {
+		t.Errorf("fonte = %v, queria hook", src)
+	}
+	if got.Elapsed != 90*time.Second {
+		t.Errorf("esperando há %v, queria 1m30s", got.Elapsed)
+	}
+
+	// Sem essa garantia, a outra fonte manda — que é o certo para um harness
+	// que não avisa o fim da espera.
+	if got, _ := arbitrate(busy, waiting, true, false, now); got.State != StateBusy {
+		t.Errorf("sem autoridade o estado devia vir da outra fonte, veio %v", got.State)
 	}
 }

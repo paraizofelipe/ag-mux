@@ -141,18 +141,11 @@ const query = `SELECT s.id AS id,
                   ORDER BY m.time_created DESC LIMIT 1), 0) AS turn,
        s.time_updated AS updated
   FROM session s
- WHERE s.directory IN (%s)
+ WHERE %s
  ORDER BY s.time_updated DESC
  LIMIT 1;`
 
 func probe(dir string, notBefore time.Time) (Status, bool) {
-	path := dbPath()
-	if path == "" {
-		return Status{}, false
-	}
-	if _, err := os.Stat(path); err != nil {
-		return Status{}, false
-	}
 	// Match the directory as tmux reports it and as the filesystem resolves
 	// it. A project reached through a symlink is recorded by opencode under
 	// whichever form it saw, and a mismatch would not look like an error —
@@ -161,8 +154,19 @@ func probe(dir string, notBefore time.Time) (Status, bool) {
 	for _, d := range candidates(dir) {
 		lits = append(lits, "'"+strings.ReplaceAll(d, "'", "''")+"'")
 	}
+	return probeWhere("s.directory IN ("+strings.Join(lits, ", ")+")", notBefore)
+}
+
+func probeWhere(where string, notBefore time.Time) (Status, bool) {
+	path := dbPath()
+	if path == "" {
+		return Status{}, false
+	}
+	if _, err := os.Stat(path); err != nil {
+		return Status{}, false
+	}
 	// Open read-only so a running opencode is never blocked or altered.
-	sql := strings.Replace(query, "%s", strings.Join(lits, ", "), 1)
+	sql := strings.Replace(query, "%s", where, 1)
 	out, err := exec.Command("sqlite3", "-json", "-readonly", path, sql).Output()
 	if err != nil {
 		return Status{}, false
@@ -210,6 +214,27 @@ func candidates(dir string) []string {
 		out = append(out, resolved)
 	}
 	return out
+}
+
+// LookupSession answers about the exact session a plugin reported for a pane.
+//
+// This is the whole point of installing the plugin: with an id there is no
+// directory to match and therefore nothing to be ambiguous about, and the
+// answer is about this pane's conversation rather than the newest one that
+// happens to share its directory.
+func LookupSession(id string) (Status, bool) {
+	if id == "" {
+		return Status{}, false
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	key := "id:" + id
+	if e, hit := cache[key]; hit && now().Sub(e.at) < ttl {
+		return e.status, e.ok
+	}
+	st, ok := probeWhere("s.id = '"+strings.ReplaceAll(id, "'", "''")+"'", time.Time{})
+	cache[key] = entry{status: st, ok: ok, at: now()}
+	return st, ok
 }
 
 func millis(ms int64) time.Time { return time.Unix(ms/1000, (ms%1000)*1e6) }

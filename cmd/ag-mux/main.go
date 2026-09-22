@@ -22,6 +22,7 @@ uso:
   ag-mux reap      fecha janelas que só têm a sidebar (chamado por hook)
   ag-mux doctor    mostra o que a detecção enxerga em cada pane
   ag-mux hook      liga os hooks do Claude Code (-install / -uninstall)
+  ag-mux plugin    liga o plugin do opencode (-install / -uninstall)
   ag-mux version
 `
 
@@ -44,6 +45,8 @@ func main() {
 		err = runDoctor(os.Args[2:])
 	case "hook":
 		err = runHook(os.Args[2:])
+	case "plugin":
+		err = runPlugin(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	default:

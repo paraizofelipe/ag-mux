@@ -212,3 +212,53 @@ func TestOpenCodeAmbiguityIsServerWide(t *testing.T) {
 		t.Errorf("sozinho no servidor devia mostrar a tarefa, veio %q", got[0].Task)
 	}
 }
+
+func stubOpencodeSession(t *testing.T, byID map[string]opencode.Status) {
+	t.Helper()
+	prev := opencodeSession
+	opencodeSession = func(id string) (opencode.Status, bool) {
+		st, ok := byID[id]
+		return st, ok
+	}
+	t.Cleanup(func() { opencodeSession = prev })
+}
+
+// The plugin exists to answer the one question no amount of looking from
+// outside can: which conversation belongs to this pane. With it, two opencode
+// in one directory stop being ambiguous, because neither is being guessed at.
+func TestOpenCodeSessionFromPluginBeatsDirectory(t *testing.T) {
+	stubOpencode(t, map[string]opencode.Status{
+		"/w/proj": {Session: opencode.Session{Title: "a sessão errada"}},
+	})
+	stubOpencodeSession(t, map[string]opencode.Status{
+		"ses_um":   {Session: opencode.Session{Title: "tarefa do pane um"}},
+		"ses_dois": {Session: opencode.Session{Title: "tarefa do pane dois"}},
+	})
+
+	um := ocPane("%1", "/w/proj")
+	um.AgentSession = "ses_um"
+	dois := ocPane("%2", "/w/proj")
+	dois.AgentSession = "ses_dois"
+
+	o := &OpenCode{}
+	o.Observe([]tmux.Pane{um, dois})
+
+	if got := o.Task(um); got != "tarefa do pane um" {
+		t.Errorf("pane um -> %q", got)
+	}
+	if got := o.Task(dois); got != "tarefa do pane dois" {
+		t.Errorf("pane dois -> %q", got)
+	}
+	for _, p := range []tmux.Pane{um, dois} {
+		if state, _, _ := o.Classify(p, nil); state == StateUnknown {
+			t.Errorf("%s ficou ambíguo mesmo com a sessão informada", p.ID)
+		}
+	}
+
+	// Sem a sessão informada, o mesmo par volta a ser indistinguível.
+	um.AgentSession, dois.AgentSession = "", ""
+	o.Observe([]tmux.Pane{um, dois})
+	if state, _, _ := o.Classify(um, nil); state != StateUnknown {
+		t.Errorf("sem a sessão devia voltar a ser ?, veio %v", state)
+	}
+}

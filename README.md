@@ -300,6 +300,44 @@ a tabela `permission` guarda permissões *concedidas* (índice único em
 `project_id, action, resource`, sem estado), e o pedido pendente só existe como
 evento, que nada persiste.
 
+### O plugin resolve os dois
+
+```sh
+ag-mux plugin             # mostra o que seria instalado e onde
+ag-mux plugin -install    # copia para ~/.config/opencode/plugin/
+ag-mux plugin -uninstall  # remove
+```
+
+Não há config para editar: o opencode carrega sozinho qualquer arquivo em
+`~/.config/opencode/plugin/` (e em `.opencode/plugin/` do projeto). Conferi os
+quatro caminhos possíveis com um plugin-sonda — todos carregam.
+
+De dentro do processo, as duas coisas que faltavam existem:
+
+| Evento | Vira |
+|---|---|
+| `session.created`, `session.updated`, `session.status`, `message.updated` | qual sessão é deste pane |
+| `permission.asked` | **precisa de você** |
+| `permission.replied` | destrava |
+| `session.idle` | destrava |
+
+Ele escreve nas opções de pane `@ag-mux-session` e `@ag-mux-hook`, o mesmo
+transporte do hook do Claude Code — a sidebar já as lê no `list-panes`.
+
+Com a sessão informada, o casamento por diretório sai de cena: dois opencode no
+mesmo diretório deixam de ser ambíguos, porque nenhum dos dois está sendo
+adivinhado.
+
+Uma diferença em relação ao Claude Code: o plugin do opencode reporta
+`permission.replied`, ou seja, **fecha toda espera que abre**. Por isso o que
+ele diz não é corrigido pelo banco. Precisa ser assim — uma volta parada num
+pedido de permissão continua parecendo uma volta em andamento no banco, então
+sem essa regra a sidebar desmentiria um relato que está certo. O Claude Code
+não tem evento equivalente, e lá a correção pela tela continua valendo.
+
+Eventos de subagente são descartados: o que interessa é a conversa que você
+abriu, não a que ela lançou.
+
 ## Testar
 
 ### Sandbox, sem tocar na sua configuração
@@ -375,9 +413,10 @@ ajuste o adapter até passar.
 
 ## Limitações conhecidas
 
-- Dois opencode no mesmo diretório aparecem como `?`, ainda que estejam em
-  sessões tmux diferentes: o banco do opencode não registra em que terminal
-  cada sessão roda, então não há como dizer qual é qual sem chutar.
+- **Sem o plugin do opencode**, dois opencode no mesmo diretório aparecem como
+  `?`, ainda que estejam em sessões tmux diferentes: o banco não registra em
+  que terminal cada sessão roda, então não há como dizer qual é qual sem
+  chutar. `ag-mux plugin -install` resolve, e também traz "precisa de você".
 - Lista só a sessão atual, por decisão de projeto. Agentes em outras sessões não
   aparecem. (Se a sidebar for levada pra outra sessão, ela passa a listar a
   daquela sessão.)
