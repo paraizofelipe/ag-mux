@@ -4,15 +4,15 @@ Uma sidebar de tmux que lista os agentes de codificação rodando na sessão, mo
 qual está trabalhando e qual parou esperando você, e pula pra ele.
 
 ```
-AGENTES                             1! 2
+AGENTS                              1! 2
 ────────────────────────────────────────
-▸✳ proj                                ●
-   implementar filtros            12m16s
-   ⎇ main
+▎✳ proj                                ●
+▎  implementar filtros            12m15s
+▎  ⎇ main
 ────────────────────────────────────────
- ✳ wt                                  ⣾
-   revisar exportacao              8m03s
-   ⎇ recurso-novo             ⧉ worktree
+▎✳ wt                                  ⣻
+▎  revisar exportacao              8m03s
+▎  ⎇ recurso-novo             ⧉ worktree
 ────────────────────────────────────────
 ⏎ ir · z zoom · p pin · x kill · n novo
 q sair
@@ -20,7 +20,8 @@ q sair
 
 `1! 2` = 2 agentes, 1 precisa de você.
 `⣾` trabalhando · `●` precisa de você · `○` ocioso.
-O nome do agente aparece **sublinhado** quando é o pane em que você está.
+`▎` a régua à esquerda agrupa as linhas de um agente e fica **azul** no
+selecionado. O nome aparece **sublinhado** quando é o pane em que você está.
 `⎇` a branch (com `*` se houver mudanças não commitadas) · `⧉` é um worktree ligado,
 não o checkout principal.
 

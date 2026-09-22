@@ -27,12 +27,15 @@ var (
 	styLabel    = lipgloss.NewStyle().Foreground(colFg)
 	styLabelSel = lipgloss.NewStyle().Foreground(colOrange).Bold(true)
 	styTask     = lipgloss.NewStyle().Foreground(colDim)
-	styCursor   = lipgloss.NewStyle().Foreground(colOrange).Bold(true)
 	styHelp     = lipgloss.NewStyle().Foreground(colDim)
 	styErr      = lipgloss.NewStyle().Foreground(colRed)
 	styWarn     = lipgloss.NewStyle().Foreground(colYellow)
 	styPin      = lipgloss.NewStyle().Foreground(colBlue)
 	styBranch   = lipgloss.NewStyle().Foreground(colBlue)
+	// The rule beside the selected agent. Selection used to be an arrow in
+	// the first column; the rule says the same thing and also groups the
+	// agent's lines into one block.
+	styBar      = lipgloss.NewStyle().Foreground(colBlue)
 	styWorktree = lipgloss.NewStyle().Foreground(colGreen)
 )
 

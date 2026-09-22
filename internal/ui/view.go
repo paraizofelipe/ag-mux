@@ -60,7 +60,7 @@ func (m Model) header(w int) string {
 	if waiting > 0 {
 		right = fmt.Sprintf("%d! %d", waiting, len(m.agents))
 	}
-	left := "AGENTES"
+	left := "AGENTS"
 	pad := w - lipgloss.Width(left) - lipgloss.Width(right)
 	if pad < 1 {
 		return styHeader.Render(truncate(left, w))
@@ -92,10 +92,16 @@ func (m Model) agentList(w int) []string {
 // agentRows renders one agent: a name line and a second line with what it is
 // doing.
 func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
-	cursor := " "
+	// A rule down the left edge groups an agent's lines into one block, and
+	// its colour is what marks the selection — replacing the arrow that used
+	// to sit here. ▎ measures one cell in tmux, which matters: it is Block
+	// Elements, the same East Asian Ambiguous family as the ◀ that once
+	// printed over its neighbour.
+	barStyle := stySep
 	if selected {
-		cursor = "▸"
+		barStyle = styBar
 	}
+	bar := barStyle.Render("▎")
 	// The marker column holds the state and nothing else. It used to be shared
 	// with a "you are here" arrow, which was wrong twice over: the arrow
 	// replaced the state on the one agent you look at most, and ◀ is an East
@@ -129,7 +135,7 @@ func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
 		glyph = styPin.Render(harnessGlyph(a.Harness))
 	}
 
-	line := styCursor.Render(cursor) + glyph + " " + style.Render(name) +
+	line := bar + glyph + " " + style.Render(name) +
 		strings.Repeat(" ", pad) + marker
 
 	detail := a.Task
@@ -145,9 +151,9 @@ func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
 	if dpad < 0 {
 		dpad = 0
 	}
-	rows := []string{line, "   " + styTask.Render(detail) +
+	rows := []string{line, bar + "  " + styTask.Render(detail) +
 		strings.Repeat(" ", dpad) + styWarn.Render(right)}
-	if repo := repoLine(a, w); repo != "" {
+	if repo := repoLine(a, bar, w); repo != "" {
 		rows = append(rows, repo)
 	}
 	return rows
@@ -157,7 +163,7 @@ func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
 // and, when it matters, that this is a linked worktree rather than the main
 // checkout. The worktree mark is pinned right so a long branch name truncates
 // before it does.
-func repoLine(a agent.Agent, w int) string {
+func repoLine(a agent.Agent, bar string, w int) string {
 	if a.Branch == "" && !a.Worktree {
 		return ""
 	}
@@ -181,7 +187,7 @@ func repoLine(a agent.Agent, w int) string {
 	if pad < 1 {
 		pad = 1
 	}
-	return "   " + styBranch.Render(left) + strings.Repeat(" ", pad) + styWorktree.Render(mark)
+	return bar + "  " + styBranch.Render(left) + strings.Repeat(" ", pad) + styWorktree.Render(mark)
 }
 
 // footer renders the prompt or the key help, wrapped to the pane width. The

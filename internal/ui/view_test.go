@@ -167,3 +167,45 @@ func TestCurrentAgentIsMarked(t *testing.T) {
 		t.Error("selecionado E atual perdeu a marca de atual")
 	}
 }
+
+// The rule runs down every line of an agent, so the three lines read as one
+// block instead of three loose rows.
+func TestAgentRowsHaveLeftRule(t *testing.T) {
+	a := mkAgent("proj", agent.StateBusy, false)
+	a.Branch = "main"
+	rows := (Model{}).agentRows(a, false, 40)
+	if len(rows) != 3 {
+		t.Fatalf("%d linhas, queria 3", len(rows))
+	}
+	for i, r := range rows {
+		if !strings.HasPrefix(stripANSI(r), "▎") {
+			t.Errorf("linha %d não começa com a régua: %q", i, stripANSI(r))
+		}
+	}
+}
+
+// Selection is the rule's colour now that the arrow is gone, so it has to
+// actually change — and only in style, never in width.
+func TestSelectedAgentRuleDiffers(t *testing.T) {
+	a := mkAgent("proj", agent.StateIdle, false)
+	a.Branch = "main"
+	m := Model{}
+	sel := m.agentRows(a, true, 40)
+	plain := m.agentRows(a, false, 40)
+
+	same := 0
+	for i := range sel {
+		if sel[i] == plain[i] {
+			same++
+		}
+		if stripANSI(sel[i]) != stripANSI(plain[i]) {
+			t.Errorf("linha %d: a seleção mudou o texto, não só a cor", i)
+		}
+		if lipgloss.Width(sel[i]) != lipgloss.Width(plain[i]) {
+			t.Errorf("linha %d: larguras diferentes", i)
+		}
+	}
+	if same == len(sel) {
+		t.Error("selecionar não mudou nada visualmente")
+	}
+}
