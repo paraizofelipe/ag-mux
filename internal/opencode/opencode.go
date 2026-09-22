@@ -77,21 +77,30 @@ func defaultDBPath() string {
 	return filepath.Join(home, ".local", "share", "opencode", "opencode.db")
 }
 
-// Lookup returns the newest session opencode has recorded for a directory.
+// Lookup returns the session opencode is working in inside a directory.
+//
+// notBefore discards sessions older than the process asking about them.
+// opencode opens on an empty prompt — it does not resume the last
+// conversation — so in a directory you have used before, the newest stored
+// session belongs to a run that already ended. Without this the sidebar would
+// label a fresh agent with last week's task and never look wrong doing it.
+// Pass the zero time to accept any session.
+//
 // The second result is false when there is nothing to report: no database, no
-// sqlite3, or no session started in that directory yet — which is the normal
-// state of an opencode that has been opened but not yet asked anything.
-func Lookup(dir string) (Status, bool) {
+// sqlite3, or no session in that directory since the process started — which
+// is the normal state of an opencode opened and not yet asked anything.
+func Lookup(dir string, notBefore time.Time) (Status, bool) {
 	if dir == "" {
 		return Status{}, false
 	}
+	key := dir + "\x00" + notBefore.UTC().Format(time.RFC3339)
 	mu.Lock()
 	defer mu.Unlock()
-	if e, hit := cache[dir]; hit && now().Sub(e.at) < ttl {
+	if e, hit := cache[key]; hit && now().Sub(e.at) < ttl {
 		return e.status, e.ok
 	}
-	st, ok := probe(dir)
-	cache[dir] = entry{status: st, ok: ok, at: now()}
+	st, ok := probe(dir, notBefore)
+	cache[key] = entry{status: st, ok: ok, at: now()}
 	return st, ok
 }
 
@@ -102,6 +111,7 @@ type row struct {
 	Agent   string `json:"agent"`
 	Last    string `json:"last"`    // the newest message's JSON, "" when none
 	Touched int64  `json:"touched"` // that message's time_updated, epoch ms
+	Updated int64  `json:"updated"` // the session's time_updated, epoch ms
 }
 
 // message is the shape we need out of a message's stored JSON. An assistant
@@ -123,13 +133,14 @@ const query = `SELECT s.id AS id,
                   ORDER BY m.time_created DESC LIMIT 1), '') AS last,
        coalesce((SELECT m.time_updated FROM message m
                   WHERE m.session_id = s.id
-                  ORDER BY m.time_created DESC LIMIT 1), 0) AS touched
+                  ORDER BY m.time_created DESC LIMIT 1), 0) AS touched,
+       s.time_updated AS updated
   FROM session s
  WHERE s.directory IN (%s)
  ORDER BY s.time_updated DESC
  LIMIT 1;`
 
-func probe(dir string) (Status, bool) {
+func probe(dir string, notBefore time.Time) (Status, bool) {
 	path := dbPath()
 	if path == "" {
 		return Status{}, false
@@ -156,6 +167,9 @@ func probe(dir string) (Status, bool) {
 		return Status{}, false
 	}
 	r := rows[0]
+	if !notBefore.IsZero() && millis(r.Updated).Before(notBefore) {
+		return Status{}, false // a conversation from a run that already ended
+	}
 
 	st := Status{Session: Session{ID: r.ID, Title: r.Title, Agent: r.Agent}}
 	if r.Last == "" {

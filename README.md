@@ -251,6 +251,18 @@ tinha à mão, **todas** as mensagens de assistant têm `time_updated` depois de
 `time_created`. Então um turno que parou de ser escrito há mais de dois
 minutos deixa de contar como trabalho.
 
+### A sessão tem que ser desta execução
+
+O opencode abre num prompt vazio — ele **não** retoma a conversa anterior. Num
+diretório onde você já trabalhou, a sessão mais recente do banco é de uma
+execução que já acabou, e entregá-la vestiria o agente novo com a tarefa da
+semana passada: errado, e sem nunca parecer errado.
+
+Por isso a consulta descarta sessões tocadas antes de o processo começar. O
+início vem do `ps` (`etime`, que não tem locale dentro), por `pane_pid`, e é
+cacheado — não muda. Enquanto você não pede nada, o agente aparece como
+ocioso e sem tarefa, que é exatamente o que ele é.
+
 ### O que o banco não sabe
 
 Ele amarra uma sessão a um **diretório**, nunca a um processo ou a um pane —

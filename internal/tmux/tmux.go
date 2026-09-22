@@ -43,6 +43,7 @@ var paneFormat = strings.Join([]string{
 	"#{window_zoomed_flag}",
 	"#{" + SidebarOption + "}",
 	"#{" + HookOption + "}",
+	"#{pane_pid}",
 }, sep)
 
 // Pane is one row of list-panes.
@@ -63,6 +64,7 @@ type Pane struct {
 	WindowZoom  bool
 	IsSidebar   bool
 	Hook        string
+	PID         int
 }
 
 // Target addresses this pane in later tmux commands.
@@ -116,8 +118,8 @@ func listPanes(args []string) ([]Pane, error) {
 
 func parsePane(line string) (Pane, error) {
 	f := strings.Split(line, sep)
-	if len(f) != 16 {
-		return Pane{}, fmt.Errorf("expected 16 fields, got %d", len(f))
+	if len(f) != 17 {
+		return Pane{}, fmt.Errorf("expected 17 fields, got %d", len(f))
 	}
 	atoi := func(s string) int { n, _ := strconv.Atoi(s); return n }
 	return Pane{
@@ -137,6 +139,7 @@ func parsePane(line string) (Pane, error) {
 		WindowZoom:  f[13] == "1",
 		IsSidebar:   f[14] == "1",
 		Hook:        f[15],
+		PID:         atoi(f[16]),
 	}, nil
 }
 

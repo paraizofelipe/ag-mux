@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 func stubOpencode(t *testing.T, byDir map[string]opencode.Status) {
 	t.Helper()
 	prev := opencodeLookup
-	opencodeLookup = func(dir string) (opencode.Status, bool) {
+	opencodeLookup = func(dir string, _ time.Time) (opencode.Status, bool) {
 		st, ok := byDir[dir]
 		return st, ok
 	}
@@ -132,5 +133,45 @@ func TestOpenCodeIgnoresSidebar(t *testing.T) {
 	o.Observe([]tmux.Pane{ocPane("%1", "/w/proj"), sidebar})
 	if o.shared["/w/proj"] {
 		t.Error("contou a sidebar como um segundo opencode")
+	}
+}
+
+func TestParseETime(t *testing.T) {
+	cases := []struct {
+		in   string
+		want time.Duration
+		ok   bool
+	}{
+		{"00:07", 7 * time.Second, true},
+		{"12:34", 12*time.Minute + 34*time.Second, true},
+		{"01:02:03", time.Hour + 2*time.Minute + 3*time.Second, true},
+		{"198-11:44:19", 198*24*time.Hour + 11*time.Hour + 44*time.Minute + 19*time.Second, true},
+		{"", 0, false},
+		{"amanhã", 0, false},
+		{"1:2:3:4", 0, false},
+	}
+	for _, c := range cases {
+		got, ok := parseETime(c.in)
+		if ok != c.ok {
+			t.Errorf("%q: ok = %v, queria %v", c.in, ok, c.ok)
+			continue
+		}
+		if ok && got != c.want {
+			t.Errorf("%q = %v, queria %v", c.in, got, c.want)
+		}
+	}
+}
+
+// Against a real process, because the point is reading a real ps.
+func TestProcessStart(t *testing.T) {
+	start, ok := processStart(os.Getpid())
+	if !ok {
+		t.Skip("ps não respondeu neste sistema")
+	}
+	if age := time.Since(start); age < 0 || age > time.Hour {
+		t.Errorf("processo de teste começou há %v, o que não é plausível", age)
+	}
+	if _, ok := processStart(0); ok {
+		t.Error("aceitou pid 0")
 	}
 }

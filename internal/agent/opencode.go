@@ -1,6 +1,10 @@
 package agent
 
 import (
+	"os/exec"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/paraizofelipe/ag-mux/internal/opencode"
@@ -65,7 +69,7 @@ func (o *OpenCode) Classify(p tmux.Pane, _ []string) (State, string, time.Durati
 		// Guessing here would show one agent's work under another's name.
 		return StateUnknown, "dois opencode neste diretório", 0
 	}
-	st, ok := opencodeLookup(p.Path)
+	st, ok := opencodeLookup(p.Path, sessionFloor(p))
 	if !ok {
 		// Running, but nothing has been asked of it yet, so there is no
 		// session to read. That is idle, and it is the truth.
@@ -83,13 +87,89 @@ func (o *OpenCode) Task(p tmux.Pane) string {
 	if o.shared[p.Path] {
 		return ""
 	}
-	st, ok := opencodeLookup(p.Path)
+	st, ok := opencodeLookup(p.Path, sessionFloor(p))
 	if !ok {
 		return ""
 	}
 	return st.Session.Title
 }
 
+// sessionFloor is the earliest a session may have been touched and still
+// belong to this pane's opencode. When the process start cannot be read the
+// floor is zero, which accepts any session — degrading to the older, looser
+// behaviour rather than losing the agent entirely.
+func sessionFloor(p tmux.Pane) time.Time {
+	start, ok := processStart(p.PID)
+	if !ok {
+		return time.Time{}
+	}
+	return start
+}
+
 // Branch defers to git: opencode prints a branch in its footer, but reading it
 // there would trade a guaranteed source for a fragile one.
 func (*OpenCode) Branch([]string) (string, bool, bool) { return "", false, false }
+
+// processStart is when a pid's process began. It never changes for a given
+// pid, so it is cached for the life of the sidebar.
+//
+// This exists because opencode opens on an empty prompt instead of resuming:
+// without knowing when the process started, a directory you worked in last
+// week would hand the sidebar that old session's title as today's task.
+var (
+	startMu    sync.Mutex
+	startCache = map[int]time.Time{}
+)
+
+func processStart(pid int) (time.Time, bool) {
+	if pid <= 0 {
+		return time.Time{}, false
+	}
+	startMu.Lock()
+	defer startMu.Unlock()
+	if t, hit := startCache[pid]; hit {
+		return t, true
+	}
+	// etime is [[DD-]HH:]MM:SS and, unlike lstart, has no locale in it.
+	out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "etime=").Output()
+	if err != nil {
+		return time.Time{}, false
+	}
+	age, ok := parseETime(strings.TrimSpace(string(out)))
+	if !ok {
+		return time.Time{}, false
+	}
+	t := timeNow().Add(-age)
+	startCache[pid] = t
+	return t, true
+}
+
+func parseETime(s string) (time.Duration, bool) {
+	if s == "" {
+		return 0, false
+	}
+	days := 0
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		n, err := strconv.Atoi(s[:i])
+		if err != nil {
+			return 0, false
+		}
+		days, s = n, s[i+1:]
+	}
+	parts := strings.Split(s, ":")
+	if len(parts) < 2 || len(parts) > 3 {
+		return 0, false
+	}
+	var units [3]int
+	for i, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return 0, false
+		}
+		units[len(units)-len(parts)+i] = n
+	}
+	return time.Duration(days)*24*time.Hour +
+		time.Duration(units[0])*time.Hour +
+		time.Duration(units[1])*time.Minute +
+		time.Duration(units[2])*time.Second, true
+}

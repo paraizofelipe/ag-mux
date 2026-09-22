@@ -90,7 +90,7 @@ func TestLookup(t *testing.T) {
 	useDB(t, db, clock)
 
 	t.Run("turno terminado", func(t *testing.T) {
-		st, ok := Lookup("/w/calmo")
+		st, ok := Lookup("/w/calmo", time.Time{})
 		if !ok {
 			t.Fatal("não achou a sessão")
 		}
@@ -103,7 +103,7 @@ func TestLookup(t *testing.T) {
 	})
 
 	t.Run("turno em voo", func(t *testing.T) {
-		st, ok := Lookup("/w/ocupado")
+		st, ok := Lookup("/w/ocupado", time.Time{})
 		if !ok {
 			t.Fatal("não achou a sessão")
 		}
@@ -116,7 +116,7 @@ func TestLookup(t *testing.T) {
 	})
 
 	t.Run("turno interrompido não conta", func(t *testing.T) {
-		st, ok := Lookup("/w/abandonado")
+		st, ok := Lookup("/w/abandonado", time.Time{})
 		if !ok {
 			t.Fatal("não achou a sessão")
 		}
@@ -129,13 +129,13 @@ func TestLookup(t *testing.T) {
 	})
 
 	t.Run("diretório sem sessão", func(t *testing.T) {
-		if _, ok := Lookup("/w/nunca-usado"); ok {
+		if _, ok := Lookup("/w/nunca-usado", time.Time{}); ok {
 			t.Error("inventou uma sessão para um diretório sem nenhuma")
 		}
 	})
 
 	t.Run("diretório vazio", func(t *testing.T) {
-		if _, ok := Lookup(""); ok {
+		if _, ok := Lookup("", time.Time{}); ok {
 			t.Error("aceitou diretório vazio")
 		}
 	})
@@ -150,7 +150,7 @@ func TestLookupPicksNewest(t *testing.T) {
 	addSession(t, db, "ses_nova", "/w/proj", "conversa de agora", "build", clock.Add(-time.Minute))
 	useDB(t, db, clock)
 
-	st, ok := Lookup("/w/proj")
+	st, ok := Lookup("/w/proj", time.Time{})
 	if !ok {
 		t.Fatal("não achou sessão")
 	}
@@ -168,7 +168,7 @@ func TestLookupQuotedDirectory(t *testing.T) {
 		strings.ReplaceAll(dir, "'", "''"), ms(clock)))
 	useDB(t, db, clock)
 
-	st, ok := Lookup(dir)
+	st, ok := Lookup(dir, time.Time{})
 	if !ok {
 		t.Fatal("aspas no caminho quebraram a consulta")
 	}
@@ -185,16 +185,16 @@ func TestLookupCache(t *testing.T) {
 	addSession(t, db, "ses_a", "/w/p", "primeiro titulo", "build", clock)
 	useDB(t, db, clock)
 
-	if st, _ := Lookup("/w/p"); st.Session.Title != "primeiro titulo" {
+	if st, _ := Lookup("/w/p", time.Time{}); st.Session.Title != "primeiro titulo" {
 		t.Fatalf("título = %q", st.Session.Title)
 	}
 	run(t, db, `UPDATE session SET title='segundo titulo' WHERE id='ses_a';`)
 
-	if st, _ := Lookup("/w/p"); st.Session.Title != "primeiro titulo" {
+	if st, _ := Lookup("/w/p", time.Time{}); st.Session.Title != "primeiro titulo" {
 		t.Errorf("dentro do TTL devia servir do cache, veio %q", st.Session.Title)
 	}
 	now = func() time.Time { return clock.Add(ttl + time.Second) }
-	if st, _ := Lookup("/w/p"); st.Session.Title != "segundo titulo" {
+	if st, _ := Lookup("/w/p", time.Time{}); st.Session.Title != "segundo titulo" {
 		t.Errorf("depois do TTL devia reconsultar, veio %q", st.Session.Title)
 	}
 }
@@ -220,11 +220,37 @@ func TestLookupFollowsSymlink(t *testing.T) {
 	addSession(t, db, "ses_l", stored, "implementar filtros", "build", clock)
 	useDB(t, db, clock)
 
-	st, ok := Lookup(link)
+	st, ok := Lookup(link, time.Time{})
 	if !ok {
 		t.Fatal("não achou a sessão pelo caminho com symlink")
 	}
 	if st.Session.Title != "implementar filtros" {
+		t.Errorf("título = %q", st.Session.Title)
+	}
+}
+
+// opencode opens on an empty prompt instead of resuming. So in a directory you
+// worked in before, the newest stored session belongs to a run that already
+// ended, and handing it over would label a fresh agent with last week's task —
+// wrong, and never looking wrong.
+func TestLookupIgnoresSessionsOlderThanTheProcess(t *testing.T) {
+	clock := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
+	started := clock.Add(-5 * time.Minute)
+	db := newDB(t)
+	addSession(t, db, "ses_ontem", "/w/proj", "conversa de ontem", "build", clock.Add(-24*time.Hour))
+	useDB(t, db, clock)
+
+	if st, ok := Lookup("/w/proj", started); ok {
+		t.Errorf("entregou uma sessão de antes do processo: %q", st.Session.Title)
+	}
+	// A session touched after the process started is this run's.
+	addSession(t, db, "ses_agora", "/w/proj", "conversa de agora", "build", clock.Add(-time.Minute))
+	cache = map[string]entry{}
+	st, ok := Lookup("/w/proj", started)
+	if !ok {
+		t.Fatal("descartou a sessão desta execução")
+	}
+	if st.Session.Title != "conversa de agora" {
 		t.Errorf("título = %q", st.Session.Title)
 	}
 }
