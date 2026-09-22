@@ -25,7 +25,8 @@ func (m Model) View() tea.View {
 	case len(m.agents) == 0:
 		top = append(top, styTask.Render(truncate("nenhum agente nesta sessão", w)))
 	default:
-		top = append(top, m.agentList(w)...)
+		rows, _ := m.agentList(w)
+		top = append(top, rows...)
 	}
 
 	// The help sits at the bottom of the pane so it does not shift every time
@@ -39,6 +40,10 @@ func (m Model) View() tea.View {
 	lines = append(lines, bottom...)
 
 	v := tea.NewView(strings.Join(lines, "\n"))
+	// Click to select, wheel to move. tmux hands mouse events to a pane whose
+	// program asks for them, so this takes precedence over tmux's own
+	// click-to-select-pane while the pointer is over the sidebar.
+	v.MouseMode = tea.MouseModeCellMotion
 	// Own the screen: the sidebar redraws continuously and must not scroll
 	// the pane's scrollback while doing it.
 	v.AltScreen = true
@@ -72,21 +77,48 @@ func (m Model) header(w int) string {
 	return styHeader.Render(left) + strings.Repeat(" ", pad) + countStyle.Render(right)
 }
 
-// agentList renders every agent, separated by a rule.
+// agentList renders every agent, separated by a rule, and reports which agent
+// owns each line (-1 for the separators).
+//
+// The owners exist so a mouse click can be mapped back to an agent without a
+// second copy of this layout arithmetic: rows are two or three lines deep
+// depending on whether there is a branch to show, and a hit test that guessed
+// that independently would drift from what is on screen.
 //
 // The rule goes only *between* neighbours: above the first and below the last
 // the header and footer rules already sit, and doubling them would read as an
 // empty entry.
-func (m Model) agentList(w int) []string {
+func (m Model) agentList(w int) (lines []string, owner []int) {
 	divider := stySep.Render(strings.Repeat("─", w))
-	var out []string
 	for i, a := range m.agents {
 		if i > 0 {
-			out = append(out, divider)
+			lines = append(lines, divider)
+			owner = append(owner, -1)
 		}
-		out = append(out, m.agentRows(a, i == m.cursor, w)...)
+		rows := m.agentRows(a, i == m.cursor, w)
+		lines = append(lines, rows...)
+		for range rows {
+			owner = append(owner, i)
+		}
 	}
-	return out
+	return lines, owner
+}
+
+// listTop is the first screen line the agent list occupies: the header and the
+// rule under it come first.
+const listTop = 2
+
+// agentAt is the agent under a screen row, for mouse hit testing.
+func (m Model) agentAt(y, w int) (int, bool) {
+	if m.err != nil || len(m.agents) == 0 {
+		return 0, false
+	}
+	_, owner := m.agentList(w)
+	i := y - listTop
+	if i < 0 || i >= len(owner) || owner[i] < 0 {
+		return 0, false
+	}
+	return owner[i], true
 }
 
 // agentRows renders one agent: a name line and a second line with what it is

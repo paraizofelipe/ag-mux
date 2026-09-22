@@ -75,8 +75,16 @@ instalar.
 | `n` | novo agente (`c` = claude, `o` = opencode) no diretório do selecionado |
 | `r` | atualizar agora |
 | `q` | fechar a sidebar |
+| clique | selecionar o agente sob o cursor |
+| roda | subir e descer na lista |
 
 `prefix + a` mostra e oculta, sempre — não importa qual pane está em foco.
+
+O mouse funciona porque a sidebar pede os eventos ao terminal, e o tmux entrega
+o clique ao pane que pediu em vez de usá-lo para trocar de pane — dá para
+conferir em `#{?mouse_sgr_flag,...}`, que fica ligado só no pane dela. Como o
+tmux não muda o pane ativo nesse caso, clicar seleciona sem tirar você de onde
+está; para agir sobre o que selecionou, é `prefix + a` e depois `⏎`.
 
 Ocultar fecha o pane em vez de estacioná-lo em algum canto: os pins e a posição
 do cursor ficam guardados numa opção do tmux, então a sidebar volta exatamente

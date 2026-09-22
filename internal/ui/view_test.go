@@ -96,7 +96,7 @@ func TestAgentListSeparators(t *testing.T) {
 		for i := range n {
 			m.agents = append(m.agents, mkAgent(fmt.Sprintf("a%d", i), agent.StateIdle, false))
 		}
-		rows := m.agentList(40)
+		rows, _ := m.agentList(40)
 
 		got := 0
 		for _, r := range rows {
@@ -129,7 +129,8 @@ func TestSeparatorWidth(t *testing.T) {
 		mkAgent("b", agent.StateIdle, false),
 	}}
 	for _, w := range []int{20, 30, 40, 60} {
-		for _, r := range m.agentList(w) {
+		rows, _ := m.agentList(w)
+		for _, r := range rows {
 			if !strings.Contains(stripANSI(r), "──") {
 				continue
 			}
@@ -207,5 +208,50 @@ func TestSelectedAgentRuleDiffers(t *testing.T) {
 	}
 	if same == len(sel) {
 		t.Error("selecionar não mudou nada visualmente")
+	}
+}
+
+// A click has to land on the agent that is actually drawn under it. Rows are
+// two or three lines deep depending on whether there is a branch, so the map
+// from screen row to agent cannot be a fixed multiple.
+func TestAgentAt(t *testing.T) {
+	withBranch := mkAgent("proj", agent.StateBusy, false)
+	withBranch.Branch = "main" // three lines
+	noBranch := mkAgent("solto", agent.StateIdle, false)
+	noBranch.Branch = "" // two lines
+
+	m := Model{agents: []agent.Agent{withBranch, noBranch, withBranch}}
+
+	// header(0) rule(1) | 2,3,4 agente 0 | 5 régua | 6,7 agente 1
+	// | 8 régua | 9,10,11 agente 2
+	want := map[int]int{
+		0: -1, 1: -1,
+		2: 0, 3: 0, 4: 0,
+		5: -1,
+		6: 1, 7: 1,
+		8: -1,
+		9: 2, 10: 2, 11: 2,
+		12: -1, 99: -1,
+	}
+	for y := 0; y <= 12; y++ {
+		got, ok := m.agentAt(y, 40)
+		if !ok {
+			got = -1
+		}
+		if got != want[y] {
+			t.Errorf("linha %d -> agente %d, queria %d", y, got, want[y])
+		}
+	}
+	if _, ok := m.agentAt(99, 40); ok {
+		t.Error("clique muito abaixo da lista acertou um agente")
+	}
+	if _, ok := m.agentAt(-3, 40); ok {
+		t.Error("coordenada negativa acertou um agente")
+	}
+
+	// Nothing to hit when there is nothing listed.
+	empty := Model{}
+	if _, ok := empty.agentAt(2, 40); ok {
+		t.Error("acertou um agente numa lista vazia")
 	}
 }

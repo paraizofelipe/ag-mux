@@ -165,6 +165,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		return m.onKey(msg.String())
+
+	case tea.MouseClickMsg:
+		if msg.Mouse().Button != tea.MouseLeft {
+			return m, nil
+		}
+		if i, ok := m.agentAt(msg.Mouse().Y, m.width); ok {
+			m.cursor = i
+			m.save()
+		}
+		return m, nil
+
+	case tea.MouseWheelMsg:
+		switch msg.Mouse().Button {
+		case tea.MouseWheelUp:
+			m.cursor--
+		case tea.MouseWheelDown:
+			m.cursor++
+		default:
+			return m, nil
+		}
+		m.clampCursor()
+		m.save()
+		return m, nil
 	}
 	return m, nil
 }
