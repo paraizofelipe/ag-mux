@@ -92,16 +92,11 @@ func (m Model) agentList(w int) []string {
 // agentRows renders one agent: a name line and a second line with what it is
 // doing.
 func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
-	// A rule down the left edge groups an agent's lines into one block, and
-	// its colour is what marks the selection — replacing the arrow that used
-	// to sit here. ▎ measures one cell in tmux, which matters: it is Block
-	// Elements, the same East Asian Ambiguous family as the ◀ that once
-	// printed over its neighbour.
 	barStyle := stySep
 	if selected {
 		barStyle = styBar
 	}
-	bar := barStyle.Render("▎")
+	bar := barStyle.Render(barGlyph)
 	// The marker column holds the state and nothing else. It used to be shared
 	// with a "you are here" arrow, which was wrong twice over: the arrow
 	// replaced the state on the one agent you look at most, and ◀ is an East

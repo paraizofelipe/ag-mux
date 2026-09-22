@@ -39,6 +39,14 @@ var (
 	styWorktree = lipgloss.NewStyle().Foreground(colGreen)
 )
 
+// barGlyph is the rule down the left edge of an agent, which groups its lines
+// into one block and carries the selection in its colour.
+//
+// It is Block Elements — the same East Asian Ambiguous family as the ◀ that
+// once printed over its neighbour — so its width was measured in tmux before
+// being used, along with the thinner and heavier candidates.
+const barGlyph = "▌"
+
 // spinnerFrames animates agents that are working.
 var spinnerFrames = []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
 

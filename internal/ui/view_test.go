@@ -178,7 +178,7 @@ func TestAgentRowsHaveLeftRule(t *testing.T) {
 		t.Fatalf("%d linhas, queria 3", len(rows))
 	}
 	for i, r := range rows {
-		if !strings.HasPrefix(stripANSI(r), "▎") {
+		if !strings.HasPrefix(stripANSI(r), barGlyph) {
 			t.Errorf("linha %d não começa com a régua: %q", i, stripANSI(r))
 		}
 	}
