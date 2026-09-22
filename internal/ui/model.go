@@ -248,7 +248,7 @@ func (m Model) onKey(key string) (tea.Model, tea.Cmd) {
 
 	case modeNewAgent:
 		m.mode = modeList
-		cmd, ok := map[string]string{"c": "claude", "o": "omp"}[key]
+		cmd, ok := map[string]string{"c": "claude", "o": "opencode"}[key]
 		if !ok {
 			m.status = ""
 			return m, nil

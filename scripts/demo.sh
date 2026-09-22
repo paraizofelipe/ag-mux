@@ -44,7 +44,6 @@ fake() {
 
 fake atlas   claude-busy.txt  '✳ ajustar exportacao'
 fake farol   claude-draft.txt '✳ implementar filtros'
-fake pomar   omp-busy.txt     'π ⠸ escrever testes de integracao'
 
 # One agent in a linked worktree, so the ⧉ marker has something to mark.
 repo "$WORKDIRS/atlas" main
@@ -54,7 +53,6 @@ fake recurso claude-busy.txt  '✳ revisar exportacao'
 fake plan    claude-idle.txt  '✳ mapear configuracoes'                orbita
 fake review  claude-idle-done-clock.txt '✳ revisar estrutura'         orbita
 # A harness that exited and left its title behind: it must NOT be listed.
-fake morto   omp-dead-scrollback.txt 'π - pomar'
 
 tmux send-keys -t "$SESSION:sidebar" \
     "clear; echo 'sandbox ag-mux — prefix+a abre a sidebar, q fecha'" C-m

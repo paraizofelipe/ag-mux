@@ -50,7 +50,7 @@ func (s State) String() string {
 // Agent is one live coding agent running in a pane.
 type Agent struct {
 	Pane     tmux.Pane
-	Harness  string // "claude" | "omp"
+	Harness  string // "claude" | "opencode"
 	Label    string // directory basename, the name you think of it by
 	Task     string // what it is doing, from the pane title
 	State    State
@@ -86,7 +86,7 @@ type Adapter interface {
 }
 
 // Adapters is every harness ag-mux knows about.
-func Adapters() []Adapter { return []Adapter{Claude{}, OMP{}} }
+func Adapters() []Adapter { return []Adapter{Claude{}} }
 
 // label is the name a human uses for an agent: the working directory.
 func label(p tmux.Pane) string {

@@ -45,8 +45,6 @@ func harnessGlyph(harness string) string {
 	switch harness {
 	case "claude":
 		return "✳"
-	case "omp":
-		return "π"
 	default:
 		return "•"
 	}

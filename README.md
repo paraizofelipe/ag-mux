@@ -4,25 +4,21 @@ Uma sidebar de tmux que lista os agentes de codificação rodando na sessão, mo
 qual está trabalhando e qual parou esperando você, e pula pra ele.
 
 ```
-AGENTES                             1! 3
+AGENTES                             1! 2
 ────────────────────────────────────────
 ▸✳ proj                                ●
    implementar filtros            12m16s
    ⎇ main
 ────────────────────────────────────────
- ✳ wt                                  ⣻
+ ✳ wt                                  ⣾
    revisar exportacao              8m03s
    ⎇ recurso-novo             ⧉ worktree
-────────────────────────────────────────
- π pomar                               ⣻
-   escrever testes de integracao     26s
-   ⎇ main
 ────────────────────────────────────────
 ⏎ ir · z zoom · p pin · x kill · n novo
 q sair
 ```
 
-`1! 3` = 3 agentes, 1 precisa de você.
+`1! 2` = 2 agentes, 1 precisa de você.
 `⣾` trabalhando · `●` precisa de você · `○` ocioso.
 `⎇` a branch (com `*` se houver mudanças não commitadas) · `⧉` é um worktree ligado,
 não o checkout principal.
@@ -32,7 +28,6 @@ não o checkout principal.
 | Harness | Como é detectado |
 |---|---|
 | Claude Code | título do pane começa com `✳`, processo em primeiro plano é a versão (`2.1.269`) |
-| Oh My Pi (`omp`) | título do pane começa com `π` |
 
 ## Instalação
 
@@ -72,7 +67,7 @@ instalar.
 | `z` | pular e dar zoom |
 | `p` | fixar no topo da lista |
 | `x` | matar o agente (pede `y` pra confirmar) |
-| `n` | novo agente (`c` = claude, `o` = omp) no diretório do selecionado |
+| `n` | novo agente (`c` = claude, `o` = opencode) no diretório do selecionado |
 | `r` | atualizar agora |
 | `q` | fechar a sidebar |
 
@@ -150,9 +145,10 @@ Três estágios, do mais barato pro mais caro:
    `list-panes` que a sidebar já faz.
 2. **Vivo** — o processo em primeiro plano não é um shell, **e** a interface do
    harness está no rodapé da tela. Os dois testes existem porque um harness que
-   sai deixa o título pra trás: um pane com título `π - pomar` rodando `zsh` com
-   a UI do OMP no scrollback é um agente morto, e uma regra que varre o buffer
-   inteiro em vez do rodapé cai nessa.
+   sai deixa o título pra trás: um pane com título `✳ mapear configuracoes`
+   rodando `zsh`, com a interface do Claude Code ainda no scrollback, é um
+   agente morto — e uma regra que varre o buffer inteiro em vez do rodapé cai
+   nessa.
 3. **Estado** — o adapter lê a tela. No Claude Code, a linha de spinner
    (`✢ Wandering… (8m 3s · ↓ 28.4k tokens)`) só existe enquanto ele trabalha, e
    já traz o tempo decorrido; a forma no passado (`✻ Cooked for 1m 27s`) é o que
@@ -257,8 +253,8 @@ principal. Com vários agentes no mesmo repositório, é o que diz qual é qual.
 
 A branch sai de graça quando o harness já a imprime: o Claude Code mostra
 `git:(main*)` no próprio rodapé, que é a mesma linha que a sidebar já lê para
-confirmar que ele está vivo. Quando o harness não mostra — o OMP é o caso —, a
-sidebar pergunta ao git.
+confirmar que ele está vivo. Quando o harness não mostra, a sidebar pergunta
+ao git.
 
 Essa é a única parte que custa processos, então ela é cacheada: uma invocação
 de `git rev-parse` responde branch e worktree de uma vez, e o resultado vale
@@ -267,7 +263,7 @@ resto da sidebar somado.
 
 ## Calibrar
 
-As regras leem a interface do Claude Code e do OMP, então uma atualização deles
+As regras leem a interface do Claude Code, então uma atualização dele
 pode quebrá-las. `ag-mux doctor` mostra exatamente o que cada estágio decidiu:
 
 ```sh
@@ -276,8 +272,7 @@ ag-mux doctor -all       # todas as sessões
 ag-mux doctor -all -tail # com as linhas que as regras leram
 ```
 
-Os adapters ficam em `internal/agent/claude.go` e `internal/agent/omp.go`, um
-arquivo cada. Os testes rodam sobre capturas reais em
+Os adapters ficam em `internal/agent/`, um arquivo por harness. Os testes rodam sobre capturas reais em
 `internal/agent/testdata/`, sem precisar de tmux:
 
 ```sh
@@ -300,5 +295,3 @@ ajuste o adapter até passar.
   por melhor esforço: a regra foi escrita sem uma captura real do estado. Se um
   agente travado numa pergunta aparecer como ocioso, `ag-mux hook -install`
   resolve de vez; senão, é essa regra que precisa de calibração.
-- O OMP distingue trabalhando de ocioso, mas não "esperando resposta sua" —
-  ambos aparecem como ocioso.

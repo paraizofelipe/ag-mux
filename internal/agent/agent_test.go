@@ -47,27 +47,13 @@ var fixtures = []fixture{
 		harness: "claude", live: true, state: StateWaiting, detail: "rascunho",
 	},
 	{
-		file:    "omp-busy.txt",
-		pane:    tmux.Pane{ID: "%43", Command: "bun", Title: "π ⠸ escrever testes de integracao", Path: "/Users/dev/projects/pomar"},
-		harness: "omp", live: true, state: StateBusy,
-		elapsed: 26 * time.Second,
-	},
-	{
-		// OMP exited; its UI is still in the scrollback but the shell prompt
-		// is back at the bottom and the title was never cleared.
-		file:    "omp-dead-scrollback.txt",
-		pane:    tmux.Pane{ID: "%36", Command: "zsh", Title: "π - pomar", Path: "/Users/dev/projects/pomar"},
-		harness: "omp", live: false,
-	},
-	{
-		file:    "omp-dead-scrollback2.txt",
-		pane:    tmux.Pane{ID: "%38", Command: "zsh", Title: "π - pomar", Path: "/Users/dev/projects/pomar"},
-		harness: "omp", live: false,
-	},
-	{
-		file:    "shell-stale-title.txt",
-		pane:    tmux.Pane{ID: "%39", Command: "zsh", Title: "π - dev", Path: "/Users/dev"},
-		harness: "omp", live: false,
+		// Claude Code exited; its chrome is still in the scrollback but the
+		// shell prompt is back at the bottom and the title was never cleared.
+		// A rule that searches the whole buffer instead of the bottom passes
+		// this one wrongly and invents an agent that is not running.
+		file:    "claude-dead-scrollback.txt",
+		pane:    tmux.Pane{ID: "%39", Command: "zsh", Title: "✳ mapear configuracoes", Path: "/Users/dev/projects/orbita"},
+		harness: "claude", live: false,
 	},
 }
 
@@ -159,9 +145,6 @@ func TestTask(t *testing.T) {
 		harness, title, want string
 	}{
 		{"claude", "✳ mapear configuracoes", "mapear configuracoes"},
-		{"omp", "π ⠸ escrever testes de integracao", "escrever testes de integracao"},
-		{"omp", "π - pomar", "pomar"},
-		{"omp", "π > pomar", "pomar"},
 	}
 	for _, c := range cases {
 		t.Run(c.title, func(t *testing.T) {
@@ -192,7 +175,7 @@ func TestDetect(t *testing.T) {
 
 	got := Detect(panes, capture)
 
-	want := []string{"%46", "%30", "%49", "%31", "%43"}
+	want := []string{"%46", "%30", "%49", "%31"}
 	if len(got) != len(want) {
 		var ids []string
 		for _, a := range got {

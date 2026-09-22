@@ -186,7 +186,7 @@ func (m Model) footer(w int) []string {
 		a, _ := m.Selected()
 		return []string{styErr.Render(truncate("matar "+a.Label+"? y/n", w))}
 	case modeNewAgent:
-		return []string{styWarn.Render(truncate("novo agente: c=claude o=omp", w))}
+		return []string{styWarn.Render(truncate("novo agente: c=claude o=opencode", w))}
 	}
 	if m.status != "" {
 		return []string{styWarn.Render(truncate(m.status, w))}

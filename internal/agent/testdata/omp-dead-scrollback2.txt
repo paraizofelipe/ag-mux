@@ -1,9 +1,0 @@
-[Extensions]
-  exemplo-adapter, exemplo-subagents, exemplo-web
- Warning: tmux extended-keys is off. Modified Enter keys may not work.
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────
-~/projects/pomar (main)
-↑141k ↓22k R705k CH99.1% $0.111 6.9%/1.0M (auto)                            (provedor) modelo-exemplo • medium
- dev  pomar   main   clear
- dev  pomar   main  

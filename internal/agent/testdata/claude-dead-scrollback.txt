@@ -1,0 +1,21 @@
+  Terminei de mapear os arquivos de configuração do projeto.
+
+  ⎿  Done (10 tool uses · 12.1k tokens · 40s)
+
+  Na prática, qualquer execução normal já carrega o perfil padrão.
+  Só não vale para a primeira execução sem cache, que é raro.
+✻ Baked for 1m 4s
+                                                                         ~81k uncached · /clear to start fresh
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  [Sonnet 4.6] │ orbita git:(main)
+  Context ████░░░░░░ 40% │ Usage ░░░░░░░░░░ 1%
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents
+
+dev@maquina ~/projects/orbita %
+dev@maquina ~/projects/orbita % ls
+README.md   cmd         go.mod      internal    scripts
+dev@maquina ~/projects/orbita % git status --short
+ M internal/app/export.go
+dev@maquina ~/projects/orbita %
