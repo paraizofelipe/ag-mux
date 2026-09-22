@@ -36,6 +36,12 @@ não o checkout principal.
 
 ## Instalação
 
+Quatro passos, dos quais só os dois primeiros são obrigatórios. Os outros dois
+fazem os agentes reportarem o próprio estado em vez de serem observados de
+fora — é a diferença entre adivinhar e saber.
+
+### 1. Compilar
+
 Precisa de Go 1.24+.
 
 ```sh
@@ -43,13 +49,27 @@ git clone https://github.com/paraizofelipe/ag-mux ~/projects/ag-mux
 cd ~/projects/ag-mux && make build
 ```
 
+O binário fica em `bin/ag-mux`, e o resto da instalação parte dele.
+
+Se um dia mover a pasta, refaça o passo 3: o hook do Claude Code guarda o
+caminho absoluto do script, e um caminho morto falha calado a cada turno. O
+passo 4 não se importa — o plugin do opencode é uma cópia.
+
+### 2. Ligar no tmux
+
 No `~/.tmux.conf`:
 
 ```tmux
 run-shell ~/projects/ag-mux/ag-mux.tmux
 ```
 
-Recarregue com `tmux source-file ~/.tmux.conf`. Abra a sidebar com `prefix + a`.
+```sh
+tmux source-file ~/.tmux.conf
+```
+
+Pronto: `prefix + a` abre e fecha a sidebar. Essa linha registra o atalho e os
+hooks que fazem a sidebar te acompanhar entre janelas e não segurar uma janela
+vazia viva.
 
 <details>
 <summary>Com TPM</summary>
@@ -61,6 +81,63 @@ set -g @plugin 'paraizofelipe/ag-mux'
 O TPM não compila o binário: rode `make build` no diretório do plugin depois de
 instalar.
 </details>
+
+<details>
+<summary>Só experimentar, sem editar arquivo nenhum</summary>
+
+```sh
+tmux run-shell ~/projects/ag-mux/ag-mux.tmux
+```
+
+Registra o atalho apenas no servidor tmux em execução. Desfaz com
+`tmux unbind a` ou reiniciando o servidor.
+</details>
+
+### 3. Ligar no Claude Code (opcional)
+
+```sh
+./bin/ag-mux hook             # mostra o que seria instalado
+./bin/ag-mux hook -install    # mescla em ~/.claude/settings.json, com backup
+```
+
+Sem isso, "travado pedindo permissão" é lido da tela por melhor esforço e pode
+aparecer como ocioso. Com isso, o próprio Claude Code avisa — e diz há quanto
+tempo está esperando, número que a tela não tem. Detalhes em
+[Hooks do Claude Code](#hooks-do-claude-code).
+
+Desfaz com `-uninstall`, que devolve o arquivo idêntico ao original.
+
+### 4. Ligar no opencode (opcional)
+
+```sh
+./bin/ag-mux plugin            # mostra o que seria instalado
+./bin/ag-mux plugin -install   # copia para ~/.config/opencode/plugin/
+```
+
+Não há config a editar: o opencode carrega sozinho o que estiver nessa pasta.
+Sem isso, dois opencode no mesmo diretório aparecem como `?`, e permissão
+pendente não aparece de jeito nenhum. Detalhes em
+[O plugin resolve os dois](#o-plugin-resolve-os-dois).
+
+Desfaz com `-uninstall`, que só apaga o arquivo.
+
+> Os passos 3 e 4 valem para processos **novos**. Um Claude Code ou um opencode
+> já aberto continua sem o integrador até ser reiniciado.
+
+### Conferir
+
+```sh
+./bin/ag-mux doctor -all
+```
+
+Imprime, por pane, o que cada estágio decidiu e de qual fonte. Para um agente
+com o integrador ligado, a linha do hook deixa de dizer `nada`:
+
+```
+3. banco: ocioso
+4. hook: precisa de você  há 1m12s  (permissão)
+→ estado: precisa de você  [hook]
+```
 
 ## Teclas
 
@@ -359,18 +436,8 @@ tmux attach -t ag-mux-demo          # de fora
 
 Lá dentro, `prefix + a`. Para limpar: `make demo-clean`.
 
-### No seu tmux, sem editar arquivo nenhum
-
-```sh
-tmux run-shell ~/projects/ag-mux/ag-mux.tmux
-```
-
-Registra o atalho só no servidor tmux em execução. Desfaz com `tmux unbind a`,
-ou reiniciando o servidor.
-
-### Permanente
-
-A linha `run-shell` no `~/.tmux.conf`, como na instalação acima.
+Para experimentar no seu próprio tmux sem editar arquivo nenhum, veja o
+`run-shell` avulso em [Instalação](#2-ligar-no-tmux).
 
 ## Branch e worktree
 
