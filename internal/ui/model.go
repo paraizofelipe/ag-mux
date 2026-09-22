@@ -49,7 +49,23 @@ type Model struct {
 	height   int
 	err      error
 	status   string
+
+	// Two clicks on the same agent are one gesture. The terminal reports
+	// clicks one by one with no count, so the pairing is ours to keep.
+	lastClick   time.Time
+	lastClicked int
 }
+
+// doubleClickWindow is how close two clicks on the same agent have to fall to
+// count as a jump rather than two selections.
+const doubleClickWindow = 400 * time.Millisecond
+
+// focusPane and uiNow are variables so the mouse and key paths can be tested
+// without a tmux server or a real clock.
+var (
+	focusPane = tmux.Focus
+	uiNow     = time.Now
+)
 
 // New builds the sidebar model, picking up the pins and cursor position from
 // the last time the sidebar was open.
@@ -62,6 +78,8 @@ func New(cfg Config) Model {
 		visible: true, // assume so until the first scan says otherwise
 		width:   40,
 		height:  24,
+
+		lastClicked: -1,
 	}
 }
 
@@ -170,11 +188,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Mouse().Button != tea.MouseLeft {
 			return m, nil
 		}
-		if i, ok := m.agentAt(msg.Mouse().Y, m.width); ok {
-			m.cursor = i
-			m.save()
+		i, ok := m.agentAt(msg.Mouse().Y, m.width)
+		if !ok {
+			m.lastClicked = -1
+			return m, nil
 		}
-		return m, nil
+		now := uiNow()
+		double := i == m.lastClicked && now.Sub(m.lastClick) <= doubleClickWindow
+		m.cursor = i
+		m.save()
+		if !double {
+			m.lastClick, m.lastClicked = now, i
+			return m, nil
+		}
+		// Forget the pair, or a third quick click would jump again.
+		m.lastClicked = -1
+		if err := focusPane(m.agents[i].Pane); err != nil {
+			m.err = err
+		}
+		return m, m.scan()
 
 	case tea.MouseWheelMsg:
 		switch msg.Mouse().Button {
@@ -314,7 +346,7 @@ func (m Model) onKey(key string) (tea.Model, tea.Cmd) {
 		return m, m.scan()
 	case "enter":
 		if a, ok := m.Selected(); ok {
-			if err := tmux.Focus(a.Pane); err != nil {
+			if err := focusPane(a.Pane); err != nil {
 				m.err = err
 			}
 		}

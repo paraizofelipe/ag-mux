@@ -76,6 +76,7 @@ instalar.
 | `r` | atualizar agora |
 | `q` | fechar a sidebar |
 | clique | selecionar o agente sob o cursor |
+| duplo clique | pular pro pane do agente |
 | roda | subir e descer na lista |
 
 `prefix + a` mostra e oculta, sempre — não importa qual pane está em foco.
@@ -84,7 +85,11 @@ O mouse funciona porque a sidebar pede os eventos ao terminal, e o tmux entrega
 o clique ao pane que pediu em vez de usá-lo para trocar de pane — dá para
 conferir em `#{?mouse_sgr_flag,...}`, que fica ligado só no pane dela. Como o
 tmux não muda o pane ativo nesse caso, clicar seleciona sem tirar você de onde
-está; para agir sobre o que selecionou, é `prefix + a` e depois `⏎`.
+está — e o duplo clique é o que fecha o ciclo sem teclado.
+
+Dois cliques contam como um só quando caem no mesmo agente dentro de 400 ms,
+em qualquer das linhas dele. Um clique na régua entre agentes desfaz o par, ou
+clicar num agente, na régua e nele de novo pularia sem você ter pedido.
 
 Ocultar fecha o pane em vez de estacioná-lo em algum canto: os pins e a posição
 do cursor ficam guardados numa opção do tmux, então a sidebar volta exatamente
