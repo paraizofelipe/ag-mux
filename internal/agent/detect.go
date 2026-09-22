@@ -34,11 +34,18 @@ var shells = map[string]bool{
 type observer interface{ Observe(panes []tmux.Pane) }
 
 // Detect turns panes into the agents actually running in them.
-func Detect(panes []tmux.Pane, capture Capturer) []Agent {
+//
+// scope is the panes to list. world is every pane on the server, and it is a
+// separate argument because telling two agents apart can need more than the
+// panes being listed: opencode's database is shared by the whole machine, so
+// two of them in one directory are indistinguishable even when they sit in
+// different tmux sessions. Passing only the listed panes would hide that and
+// hand one session's task to another's agent, with nothing looking wrong.
+func Detect(scope, world []tmux.Pane, capture Capturer) []Agent {
 	ads := Adapters()
-	Observe(ads, panes)
+	Observe(ads, world)
 	var agents []Agent
-	for _, p := range panes {
+	for _, p := range scope {
 		if a, ok := detectOne(ads, p, capture); ok {
 			agents = append(agents, a)
 		}

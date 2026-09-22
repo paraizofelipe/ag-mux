@@ -37,7 +37,7 @@ func TestOpenCodeNeverCaptures(t *testing.T) {
 		captured++
 		return nil, nil
 	}
-	got := Detect([]tmux.Pane{ocPane("%1", "/w/proj")}, capture)
+	got := Detect([]tmux.Pane{ocPane("%1", "/w/proj")}, []tmux.Pane{ocPane("%1", "/w/proj")}, capture)
 
 	if len(got) != 1 {
 		t.Fatalf("detectou %d agentes, queria 1", len(got))
@@ -173,5 +173,42 @@ func TestProcessStart(t *testing.T) {
 	}
 	if _, ok := processStart(0); ok {
 		t.Error("aceitou pid 0")
+	}
+}
+
+// opencode's database is shared by the whole machine, so two of them in one
+// directory are indistinguishable even sitting in different tmux sessions.
+// Looking only at the panes being listed hides that, and hands one session's
+// task to the other's agent with nothing looking wrong.
+func TestOpenCodeAmbiguityIsServerWide(t *testing.T) {
+	stubGit(t, git.Info{}, false)
+	stubOpencode(t, map[string]opencode.Status{
+		"/w/proj": {Session: opencode.Session{Title: "implementar filtros"}},
+	})
+
+	mine := ocPane("%1", "/w/proj")
+	mine.Session = "um"
+	other := ocPane("%2", "/w/proj")
+	other.Session = "dois"
+
+	capture := func(string, int) ([]string, error) { return nil, nil }
+
+	// Listing only session "um", which holds a single opencode.
+	got := Detect([]tmux.Pane{mine}, []tmux.Pane{mine, other}, capture)
+	if len(got) != 1 {
+		t.Fatalf("detectou %d agentes, queria 1", len(got))
+	}
+	if got[0].State != StateUnknown {
+		t.Errorf("estado = %v, queria ? — há outro opencode no mesmo diretório em outra sessão",
+			got[0].State)
+	}
+	if got[0].Task != "" {
+		t.Errorf("mostrou a tarefa %q, que pode ser do processo da outra sessão", got[0].Task)
+	}
+
+	// Alone on the server, it is unambiguous again.
+	got = Detect([]tmux.Pane{mine}, []tmux.Pane{mine}, capture)
+	if got[0].Task != "implementar filtros" {
+		t.Errorf("sozinho no servidor devia mostrar a tarefa, veio %q", got[0].Task)
 	}
 }

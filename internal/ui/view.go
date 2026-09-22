@@ -117,6 +117,13 @@ func (m Model) agentRows(a agent.Agent, selected bool, w int) []string {
 	if selected {
 		style = styLabelSel
 	}
+	if a.Current() {
+		// "You are here" marks the name instead of taking a column. An
+		// underline is a modifier, so it stacks with the selected colour
+		// rather than replacing it, and it cannot overflow the way the arrow
+		// this replaced did.
+		style = style.Underline(true)
+	}
 	glyph := styTask.Render(harnessGlyph(a.Harness))
 	if a.Pinned {
 		glyph = styPin.Render(harnessGlyph(a.Harness))

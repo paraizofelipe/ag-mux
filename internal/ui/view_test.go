@@ -139,3 +139,31 @@ func TestSeparatorWidth(t *testing.T) {
 		}
 	}
 }
+
+// The pane you are sitting in has to be findable in the list. It used to carry
+// an arrow in the state column, which both hid the state and overflowed; the
+// mark now rides on the name, where it costs no column.
+func TestCurrentAgentIsMarked(t *testing.T) {
+	m := Model{}
+	here := m.agentRows(mkAgent("proj", agent.StateBusy, true), false, 40)[0]
+	away := m.agentRows(mkAgent("proj", agent.StateBusy, false), false, 40)[0]
+
+	if here == away {
+		t.Error("o agente em que você está não se distingue dos outros")
+	}
+	if stripANSI(here) != stripANSI(away) {
+		t.Errorf("a marca mudou o texto, não só o estilo:\n  aqui: %q\n  fora: %q",
+			stripANSI(here), stripANSI(away))
+	}
+	if lipgloss.Width(here) != lipgloss.Width(away) {
+		t.Errorf("larguras diferentes: %d vs %d", lipgloss.Width(here), lipgloss.Width(away))
+	}
+
+	// It must survive being the selected row too, or it vanishes exactly when
+	// you navigate to it.
+	sel := m.agentRows(mkAgent("proj", agent.StateBusy, true), true, 40)
+	selAway := m.agentRows(mkAgent("proj", agent.StateBusy, false), true, 40)
+	if sel[0] == selAway[0] {
+		t.Error("selecionado E atual perdeu a marca de atual")
+	}
+}

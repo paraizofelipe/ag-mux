@@ -100,7 +100,9 @@ func (m Model) scan() tea.Cmd {
 			}
 		}
 		visible := false
-		kept := panes[:0]
+		// A fresh slice, not panes[:0]: the full list is passed to Detect as
+		// well, and filtering in place would overwrite it as we went.
+		kept := make([]tmux.Pane, 0, len(panes))
 		for _, p := range panes {
 			if p.ID == self {
 				visible = p.WindowAct
@@ -110,7 +112,7 @@ func (m Model) scan() tea.Cmd {
 				kept = append(kept, p)
 			}
 		}
-		return scanMsg{agents: agent.Detect(kept, tmux.CapturePane), visible: visible}
+		return scanMsg{agents: agent.Detect(kept, panes, tmux.CapturePane), visible: visible}
 	}
 }
 

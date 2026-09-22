@@ -173,7 +173,7 @@ func TestDetect(t *testing.T) {
 	)
 	capture := func(target string, n int) ([]string, error) { return captures[target], nil }
 
-	got := Detect(panes, capture)
+	got := Detect(panes, panes, capture)
 
 	want := []string{"%46", "%30", "%49", "%31"}
 	if len(got) != len(want) {

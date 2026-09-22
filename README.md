@@ -20,6 +20,7 @@ q sair
 
 `1! 2` = 2 agentes, 1 precisa de você.
 `⣾` trabalhando · `●` precisa de você · `○` ocioso.
+O nome do agente aparece **sublinhado** quando é o pane em que você está.
 `⎇` a branch (com `*` se houver mudanças não commitadas) · `⧉` é um worktree ligado,
 não o checkout principal.
 
@@ -274,6 +275,12 @@ sidebar **não escolhe um** — mostra `?` e diz por quê. Exibir o trabalho de 
 com o nome do outro seria errar em silêncio, que é pior que admitir que não
 sabe.
 
+Essa conta é feita sobre **todos os panes do servidor**, não só os da sessão
+listada. O banco é da máquina inteira, então dois opencode no mesmo diretório
+se confundem mesmo em sessões tmux diferentes — e olhar só a sessão listada
+esconderia exatamente isso, entregando a tarefa de um processo ao agente de
+outro sem nada parecer errado.
+
 Pelo mesmo motivo, "travado pedindo permissão" não aparece para o opencode:
 a tabela `permission` guarda permissões *concedidas* (índice único em
 `project_id, action, resource`, sem estado), e o pedido pendente só existe como
@@ -354,9 +361,9 @@ ajuste o adapter até passar.
 
 ## Limitações conhecidas
 
-- Dois opencode no mesmo diretório aparecem como `?`: o banco do opencode não
-  registra em que terminal cada sessão roda, então não há como dizer qual é
-  qual sem chutar.
+- Dois opencode no mesmo diretório aparecem como `?`, ainda que estejam em
+  sessões tmux diferentes: o banco do opencode não registra em que terminal
+  cada sessão roda, então não há como dizer qual é qual sem chutar.
 - Lista só a sessão atual, por decisão de projeto. Agentes em outras sessões não
   aparecem. (Se a sidebar for levada pra outra sessão, ela passa a listar a
   daquela sessão.)
